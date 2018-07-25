@@ -58,7 +58,7 @@ async def on_ready():
 @bot.command(pass_context=True)
 async def hello(ctx):
     name = ctx.message.author.mention
-    await bot.say("Hello {}!".format(name))
+    await bot.say("SHello {}!".format(name))
 
 # !clear - bot clears text channel after confirmation
 @bot.command(pass_context=True)
@@ -134,4 +134,4 @@ async def flakeReset(ctx):
 
 
 
-bot.run('NDY1OTY5NTU2NjMzMDI2NjA0.Dibi1A.vN_nB89ttytL_Ze60ojAaAo8dM8')
+bot.run(process.env.BOT_TOKEN)
