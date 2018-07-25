@@ -6,6 +6,7 @@ from discord.ext import commands
 from discord.ext.commands import Bot
 import asyncio
 import sqlite3
+import os
 
 # Bot Setup
 bot = commands.Bot(command_prefix = "!")
@@ -135,4 +136,4 @@ async def flakeReset(ctx):
 
 
 
-bot.run(process.env.BOT_TOKEN)
+bot.run(os.environ.get(BOT_TOKEN), None)
