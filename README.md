@@ -1,0 +1,2 @@
+# ScottBot
+Discord Bot
