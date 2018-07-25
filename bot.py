@@ -104,6 +104,31 @@ async def flake(ctx):
 async def flakeRank():
     await bot.say(flakeRead())
 
+# !flakeReset
+@bot.command(pass_context=False)
+async def flakeReset(ctx):
+    # Check Permissions
+    user = ctx.message.author
+    permissions = user.permissions_in(ctx.message.channel)
+    if not permissions.administrator:
+        await bot.say('Only admins may use !flakeReset.')
+        return
+
+    # Confirm
+    await bot.say("Are you sure you want to permanently reset the flakeRank? Type 'Y' to confirm.")
+    msg = await bot.wait_for_message(timeout=10, author=user)
+    print(msg.content)
+    if msg.content.lower() != 'y':
+        await bot.say('Reset aborted.')
+        return
+
+    # Reset
+    conn = sqlite3.connect('bot_database.db')
+    c = conn.cursor()
+    c.execute('DELETE FROM flake')
+    c.close()
+    conn.close()
+
     
 
 
