@@ -136,4 +136,4 @@ async def flakeReset(ctx):
 
 
 
-bot.run(os.environ.get(BOT_TOKEN), None)
+bot.run(os.environ.get('BOT_TOKEN', None))
