@@ -11,6 +11,7 @@ import os
 # Bot Setup
 bot = commands.Bot(command_prefix = "!")
 client = discord.Client()
+VERSION = '1.0'
 
 commands = ['!hello','!clear','!flake']
 
@@ -53,7 +54,12 @@ def flakeRead():
 # Startup - print to console
 @bot.event
 async def on_ready():
-    print(bot.user.name + " is ready!")
+    print(bot.user.name + ' Version: ' + VERSION + " is ready!")
+
+# !version - bot says version number
+@bot.command(pass_context=False)
+async def version():
+    await bot.say('ScottBot is running Version ' + VERSION)
 
 # !hello - bot greets @user
 @bot.command(pass_context=True)
