@@ -44,7 +44,7 @@ def flakeRead():
     c.execute('SELECT * FROM Flake ORDER BY Count DESC')
     rows = c.fetchall()
     for row in rows:
-        rtn += '{:<25}\t\t\t'.format(str(row[0]))
+        rtn += '{:<25}\t\t\t\t\t'.format(str(row[0]))
         rtn += str(row[1]) + '\n'
     c.close()
     conn.close()
