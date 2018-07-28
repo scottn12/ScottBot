@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 import os
 
-version = '1.1'
+version = '1.2'
 extensions = ['admin', 'flake', 'misc']
 
 bot = commands.Bot(command_prefix = "!", description = 'ScottBot Version: ' + version)
