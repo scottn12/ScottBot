@@ -1,6 +1,9 @@
 import discord
 from discord.ext import commands
 from discord.ext.commands import Bot
+import asyncio
+
+from bot import VERSION
 
 class Misc:
     '''Miscellaneous commands anyone can use.'''
@@ -12,6 +15,11 @@ class Misc:
     async def help(self, ctx, *args: str):
         """Shows this message."""
         return await commands.bot._default_help_command(ctx, *args)
+    
+    @commands.command(pass_context=False)
+    async def version(self):
+        '''Prints ScottBot Version.'''
+        await self.bot.say('ScottBot is running Version: ' + VERSION)
 
     @commands.command(pass_context=True)
     async def hello(self, ctx):
@@ -45,42 +53,34 @@ class Misc:
 
     @commands.command(pass_context=True)
     async def poll(self, ctx):
-        '''Creates poll using reactions. !poll "Question" Choices Time'''
+        '''Creates a poll: !poll "Question" Choices'''
+        # Check for valid input and parse
         try:
             msg = ctx.message.content.split('"')
         except: 
-            
+            await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): !poll "Question" Choice Choice')
             return
         question = msg[1]
-        msg = msg[-1].split()
-        try:
-            int(msg[-1])
-        except:
-            await self.bot.say('Error! Use the following format(Min 2, Max 10 Choices): !poll "Question" Choice Choice Time(Minutes)')
+        choices = msg[-1].split()
+        if (len(choices) < 2):
+            await self.bot.say('Error! Too few choices (Min 2).')
             return
-        if (len(msg) < 3):
-            await self.bot.say('Error! Use the following format(Min 2, Max 10 Choices): !poll "Question" Choice Choice Time(Minutes)')
+        if (len(choices) > 9):
+            await self.bot.say('Error! Too many choices (Max 9).')
             return
-        if (len(msg) > 11):
-            await self.bot.say('Error! Too many choices (Max 10).')
-        time = int(msg[-1])
-        del msg[-1] # Remove time
-        choices = []
-        for choice in msg:
-            choices.append(choice)
-        await self.bot.say(pollPrint(question, choices))
-        poll = self.bot.logs_from(ctx.message.channel, 1)
-        im sleepy
+        poll = await self.bot.say(pollPrint(question, choices))
+        emoji = ['1⃣', '2⃣', '3⃣', '4⃣', '5⃣', '6⃣', '7⃣', '8⃣', '9⃣'] # unicode for emoji's 1-9
+        for i in range(len(choices)):
+            await self.bot.add_reaction(poll, emoji[i])
 
+# Helper function to print message for !poll
 def pollPrint(question: str, choices: list):
     emoji = [':one:',':two:',':three:',':four:',':five:',':six:',':seven:',':eight:',':nine:',':ten:']
-    rtn = question + ' (React to vote)\n'
+    rtn = 'Poll:\n'
+    rtn += question + ' (React to vote)\n'
     for i in range(len(choices)):
         rtn += emoji[i] + ' ' + choices[i] + '\n'
     return rtn
-
-
-
 
 def setup(bot):
     bot.add_cog(Misc(bot))
