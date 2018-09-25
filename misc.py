@@ -86,7 +86,7 @@ class Misc:
 # Helper function to print message for !poll
 def pollPrint(question: str, choices: list):
     emoji = [':one:',':two:',':three:',':four:',':five:',':six:',':seven:',':eight:',':nine:',':ten:']
-    rtn = 'Poll:"\n'
+    rtn = 'Poll:\n'
     rtn += question + '\n'
     for i in range(len(choices)):
         rtn += emoji[i] + ' ' + choices[i] + '\n'
