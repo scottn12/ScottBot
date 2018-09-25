@@ -30,6 +30,21 @@ class Admin:
             await self.bot.delete_message(message)
 
     @commands.command(pass_context=True)
+    async def changePrefix(self, ctx):
+        if (not await self.isAdmin(ctx)):
+            await self.bot.say('Only admins may use !changePrefix.')
+            return
+        from bot import changePrefix
+        import string
+        '''Changes the prefix for ScottBot commands.'''
+        newPrefix = ctx.message.content[14:]
+        if (newPrefix in string.punctuation):
+            changePrefix(newPrefix)
+            await self.bot.say('Prefix successfully changed!')
+        else:
+            await self.bot.say('Invalid prefix. New prefix must be a single punctuation character.')
+
+    @commands.command(pass_context=True)
     async def flakeReset(self, ctx):
         '''Resets the flakeRank.'''
         if (not await self.isAdmin(ctx)):

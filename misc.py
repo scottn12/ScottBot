@@ -2,7 +2,6 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import Bot
 import asyncio
-
 from bot import VERSION
 
 class Misc:
@@ -10,6 +9,12 @@ class Misc:
     def __init__(self, bot):
         self.bot = bot
         self.bot.remove_command('help')
+        self.countNum = 0
+        
+    #@bot.event
+    #async def on_member_update(before, after):
+    #    if(before.activity != discord.Status.Streaming and after.activity == discord.Status.Streaming):
+    #        print('hi')
 
     @commands.command(pass_context=True)
     async def help(self, ctx, *args: str):
@@ -56,18 +61,23 @@ class Misc:
         '''Creates a poll: !poll "Question" Choices'''
         # Check for valid input and parse
         try:
-            msg = ctx.message.content.split('"')
-        except: 
-            await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): !poll "Question" Choice Choice')
+            msg = ctx.message.content[6:]
+            msg = msg.split('" "') #Split questions and choices
+            msg[0] = msg[0].replace('"','') #Remove remaning quotations
+            msg[-1] = msg[-1].replace('"','')
+            question = msg[0]
+            choices = msg[1:]
+        except:
+            await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): !poll "Question" "Choice" "Choice"')
             return
-        question = msg[1]
-        choices = msg[-1].split()
+        #Check if number of choices is valid
         if (len(choices) < 2):
             await self.bot.say('Error! Too few choices (Min 2).')
             return
         if (len(choices) > 9):
             await self.bot.say('Error! Too many choices (Max 9).')
             return
+        #Print and React
         poll = await self.bot.say(pollPrint(question, choices))
         emoji = ['1⃣', '2⃣', '3⃣', '4⃣', '5⃣', '6⃣', '7⃣', '8⃣', '9⃣'] # unicode for emoji's 1-9
         for i in range(len(choices)):
@@ -76,8 +86,8 @@ class Misc:
 # Helper function to print message for !poll
 def pollPrint(question: str, choices: list):
     emoji = [':one:',':two:',':three:',':four:',':five:',':six:',':seven:',':eight:',':nine:',':ten:']
-    rtn = 'Poll:\n'
-    rtn += question + ' (React to vote)\n'
+    rtn = 'Poll:"\n'
+    rtn += question + '\n'
     for i in range(len(choices)):
         rtn += emoji[i] + ' ' + choices[i] + '\n'
     return rtn
