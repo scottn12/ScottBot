@@ -5,7 +5,7 @@ from discord.ext import commands
 import os
 
 PREFIX = '!'
-VERSION = '1.3'
+VERSION = '1.2.3'
 extensions = ['admin', 'flake', 'misc']
 
 bot = commands.Bot(command_prefix = PREFIX, description = 'ScottBot Version: ' + VERSION, game = discord.Game(name='Overcooked'))
