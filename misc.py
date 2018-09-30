@@ -53,7 +53,7 @@ class Misc:
             await self.bot.delete_messages(messages)
 
         # For messages older than 14 days
-        async for message in messages:
+        for message in messages:
             await self.bot.delete_message(message)
 
     @commands.command(pass_context=True)
