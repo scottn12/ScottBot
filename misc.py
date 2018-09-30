@@ -12,8 +12,13 @@ class Misc:
         self.bot.remove_command('help')
 
     @commands.command(pass_context=True)
+    async def streamPing(self, ctx):
+        '''The streamer role will be pinged when you start streaming.'''
+        
+
+    @commands.command(pass_context=True)
     async def help(self, ctx, *args: str):
-        """Shows this message."""
+        '''Shows this message.'''
         return await commands.bot._default_help_command(ctx, *args)
     
     @commands.command(pass_context=False)

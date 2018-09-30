@@ -7,6 +7,23 @@ class Admin:
         self.bot = bot
     
     @commands.command(pass_context=True)
+    async def setStreamRole(self, ctx):
+        '''Sets the role to be mentioned when someone starts streaming.'''
+        #Check Admin
+        if (not await self.isAdmin(ctx)):
+            await self.bot.say('Only admins may use !flakeReset.')
+            return
+        try:
+            roles = ctx.message.role_mentions
+        except:
+            await self.bot.say('Error! Use the format: !setStreamRole @role')
+            return
+        if len(roles) != 1:
+            await self.bot.say('Error! Use the format: !setStreamRole @role')
+            return
+        #save role
+
+    @commands.command(pass_context=True)
     async def clearAll(self, ctx):
         '''Clears all messages in the text channel.'''
         if (not await self.isAdmin(ctx)):
@@ -43,9 +60,9 @@ class Admin:
         
         # Reset
         import sqlite3
-        conn = sqlite3.connect('bot_database.db')
+        conn = sqlite3.connect('data/bot_database.db')
         c = conn.cursor()
-        c.execute('DROP TABLE IF EXISTS flake')
+        c.execute('DROP TABLE IF EXISTS flake'+ctx.message.server.name)
         c.close()
         conn.close()
         

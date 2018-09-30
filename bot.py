@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 import os
 
-VERSION = '1.2.1'
+VERSION = '1.3'
 extensions = ['admin', 'flake', 'misc']
 
 bot = commands.Bot(command_prefix = "!", description = 'ScottBot Version: ' + VERSION, activity = discord.Game(name='Overcooked'))
@@ -16,4 +16,4 @@ async def on_ready():
 if (__name__ == '__main__'):
     for extension in extensions:
         bot.load_extension(extension)
-    bot.run(os.environ.get('BOT_TOKEN', None))
+    #bot.run(os.environ.get('BOT_TOKEN', None))
