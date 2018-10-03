@@ -5,7 +5,7 @@ from discord.ext import commands
 import os
 
 PREFIX = '!'
-VERSION = '1.3.1'
+VERSION = '1.3.2'
 extensions = ['admin', 'flake', 'misc']
 
 bot = commands.Bot(command_prefix = PREFIX, description = 'ScottBot Version: ' + VERSION, game = discord.Game(name='Overcooked'))
@@ -26,11 +26,17 @@ async def on_member_update(before, after):
             
         for server in data['servers']:
             if serverID == server['serverID']: # Look for current server
-                channelID = server['channelID'] 
+                channelID = server['channelID']
+                roleID = server['roleID']
+                if roleID != None:
+                    roleMention = discord.utils.get(before.server.roles, id=roleID).mention + ', '
+                else:
+                    roleMention = ''
+                    
         if channelID == '-1':
             return # Server has no designated channel
 
-        msg = after.mention + ' has just gone live at ' + after.game.url + ' !'
+        msg = roleMention + after.nick + ' has just gone live at ' + after.game.url
         await bot.send_message(discord.Object(id=channelID), msg)
             
 

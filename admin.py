@@ -8,13 +8,22 @@ class Admin:
     
     @commands.command(pass_context=True)
     async def streamPing(self, ctx):
-        '''Sets up ScottBot to alert when someone starts streaming.'''
+        '''Sets up ScottBot to alert a role(optional) when someone starts streaming.'''
 
         if (not await self.isAdmin(ctx)): #Check Admin
             await self.bot.say('Only admins may use !streamPing.')
             return
-        
-        # Update Stream Info
+
+        roles = ctx.message.role_mentions #Get roles mentioned
+        if len(roles) > 1:
+            await self.bot.say('Error! Maximum of one role allowed.')
+            return
+        try:
+            roleID = roles[0].id
+        except:
+            roleID = None
+
+        # Update Stream Data
         import json
         with open('data/streamData.json','r') as f:
             data = json.load(f)
@@ -24,16 +33,51 @@ class Admin:
 
         newData = {
             "serverID": serverID,
-            "channelID": channelID
+            "channelID": channelID,
+            "roleID": roleID,
         }
         
-        if newData not in data['servers']:
+        newServer = True
+        for server in data['servers']: 
+            if serverID == server['serverID']: # Check if server is already registered and update if true
+                server['channelID'] = channelID
+                server['roleID'] = roleID
+                newServer = False
+
+        if newServer: # Add new Data
             data['servers'].append(newData)
 
-        with open('data/streamData.json', 'w') as f:
+        with open('data/streamData.json', 'w') as f: # Update JSON
             json.dump(data, f, indent=2)
 
+        if roleID != None:
+            await self.bot.say('Stream channel and role set!')
+            return
         await self.bot.say('Stream channel set!')
+    
+    @commands.command(pass_context=True)
+    async def disableStreamPing(self, ctx):
+        '''Disables streaming alters for this server.'''
+
+        if (not await self.isAdmin(ctx)): #Check Admin
+            await self.bot.say('Only admins may use !disableStreamPing.')
+            return
+
+        import json
+        with open('data/streamData.json','r') as f:
+            data = json.load(f)
+        
+        serverID = ctx.message.server.id
+
+        for server in data['servers']: 
+            if serverID == server['serverID']: # Check if server is already registered and update if true
+                del server
+                await self.bot.say('StreamPing has been disabled!')
+                with open('data/streamData.json', 'w') as f: # Update JSON
+                    json.dump(data, f, indent=2) 
+                return
+                
+        await self.bot.say('StreamPing was not already enabled!')              
 
     @commands.command(pass_context=True)
     async def clearAll(self, ctx):
