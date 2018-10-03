@@ -18,12 +18,15 @@ class Admin:
         import json
         with open('data/streamData.json','r') as f:
             data = json.load(f)
+
         serverID = ctx.message.server.id
         channelID = ctx.message.channel.id
+
         newData = {
             "serverID": serverID,
             "channelID": channelID
         }
+        
         if newData not in data['servers']:
             data['servers'].append(newData)
 

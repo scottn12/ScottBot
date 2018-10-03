@@ -14,24 +14,23 @@ bot = commands.Bot(command_prefix = PREFIX, description = 'ScottBot Version: ' +
 async def on_ready():
     print(bot.user.name + ' Version: ' + VERSION + " is ready!")
 
-@bot.event
+@bot.event # Stream Ping
 async def on_member_update(before, after):
-    if (before.game == None or before.game.type != 1) and (after.game != None and after.game.type == 1):
+    if (before.game == None or before.game.type != 1) and (after.game != None and after.game.type == 1): # Before = Not Streaming, After = Streaming
         serverID = before.server.id
         channelID = '-1'
+
         import json
         with open('data/streamData.json','r') as f:
             data = json.load(f)
+            
         for server in data['servers']:
-            if serverID == server['serverID']:
-                channelID = server['channelID']
+            if serverID == server['serverID']: # Look for current server
+                channelID = server['channelID'] 
         if channelID == '-1':
-            return
+            return # Server has no designated channel
 
-        msg = after.mention 
-        msg += ' has just gone live at ' 
-        msg += after.game.url
-        msg += ' !'
+        msg = after.mention + ' has just gone live at ' + after.game.url + ' !'
         await bot.send_message(discord.Object(id=channelID), msg)
             
 
