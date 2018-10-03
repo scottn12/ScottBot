@@ -9,16 +9,11 @@ class Misc:
     def __init__(self, bot):
         self.bot = bot
         self.bot.remove_command('help')
-        self.countNum = 0
-        
-    #@bot.event
-    #async def on_member_update(before, after):
-    #    if(before.activity != discord.Status.Streaming and after.activity == discord.Status.Streaming):
-    #        print('hi')
+        self.countNum = 0        
 
     @commands.command(pass_context=True)
     async def help(self, ctx, *args: str):
-        """Shows this message."""
+        '''Shows this message.'''
         return await commands.bot._default_help_command(ctx, *args)
     
     @commands.command(pass_context=False)
@@ -90,7 +85,7 @@ def pollPrint(question: str, choices: list):
     rtn += question + '\n'
     for i in range(len(choices)):
         rtn += emoji[i] + ' ' + choices[i] + '\n'
-    return rtn
+    return rtn    
 
 def setup(bot):
     bot.add_cog(Misc(bot))

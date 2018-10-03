@@ -7,6 +7,32 @@ class Admin:
         self.bot = bot
     
     @commands.command(pass_context=True)
+    async def streamPing(self, ctx):
+        '''Sets up ScottBot to alert when someone starts streaming.'''
+
+        if (not await self.isAdmin(ctx)): #Check Admin
+            await self.bot.say('Only admins may use !streamPing.')
+            return
+        
+        # Update Stream Info
+        import json
+        with open('data/streamData.json','r') as f:
+            data = json.load(f)
+        serverID = ctx.message.server.id
+        channelID = ctx.message.channel.id
+        newData = {
+            "serverID": serverID,
+            "channelID": channelID
+        }
+        if newData not in data['servers']:
+            data['servers'].append(newData)
+
+        with open('data/streamData.json', 'w') as f:
+            json.dump(data, f, indent=2)
+
+        await self.bot.say('Stream channel set!')
+
+    @commands.command(pass_context=True)
     async def clearAll(self, ctx):
         '''Clears all messages in the text channel.'''
         if (not await self.isAdmin(ctx)):
@@ -34,12 +60,10 @@ class Admin:
         if (not await self.isAdmin(ctx)):
             await self.bot.say('Only admins may use !changePrefix.')
             return
-        from bot import changePrefix
         import string
         '''Changes the prefix for ScottBot commands.'''
         newPrefix = ctx.message.content[14:]
         if (newPrefix in string.punctuation):
-            changePrefix(newPrefix)
             await self.bot.say('Prefix successfully changed!')
         else:
             await self.bot.say('Invalid prefix. New prefix must be a single punctuation character.')
@@ -58,9 +82,9 @@ class Admin:
         
         # Reset
         import sqlite3
-        conn = sqlite3.connect('bot_database.db')
+        conn = sqlite3.connect('data/bot_database.db')
         c = conn.cursor()
-        c.execute('DROP TABLE IF EXISTS flake')
+        c.execute('DROP TABLE IF EXISTS flake'+ctx.message.server.name)
         c.close()
         conn.close()
         
