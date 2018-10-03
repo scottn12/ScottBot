@@ -87,7 +87,7 @@ class Admin:
         import sqlite3
         conn = sqlite3.connect('data/bot_database.db')
         c = conn.cursor()
-        c.execute('DROP TABLE IF EXISTS flake'+ctx.message.server.name)
+        c.execute('DROP TABLE IF EXISTS flake'+ctx.message.server.id)
         c.close()
         conn.close()
         
