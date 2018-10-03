@@ -12,6 +12,11 @@ class Misc:
         self.countNum = 0        
 
     @commands.command(pass_context=True)
+    async def streamPing(self, ctx):
+        '''The streamer role will be pinged when you start streaming.'''
+        
+
+    @commands.command(pass_context=True)
     async def help(self, ctx, *args: str):
         '''Shows this message.'''
         return await commands.bot._default_help_command(ctx, *args)
