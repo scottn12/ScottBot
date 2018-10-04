@@ -18,12 +18,11 @@ async def on_ready():
 async def on_member_update(before, after):
     if (before.game == None or before.game.type != 1) and (after.game != None and after.game.type == 1): # Before = Not Streaming, After = Streaming
         serverID = before.server.id
-        channelID = '-1'
 
         import json
         with open('data/streamData.json','r') as f:
             data = json.load(f)
-            
+        
         for server in data['servers']:
             if serverID == server['serverID']: # Look for current server
                 channelID = server['channelID']
@@ -32,14 +31,9 @@ async def on_member_update(before, after):
                     roleMention = discord.utils.get(before.server.roles, id=roleID).mention + ', '
                 else:
                     roleMention = ''
-                    
-        if channelID == '-1':
-            return # Server has no designated channel
-
-        msg = roleMention + after.nick + ' has just gone live at ' + after.game.url
-        await bot.send_message(discord.Object(id=channelID), msg)
+                msg = roleMention + after.mention + ' has just gone live at ' + after.game.url
+                await bot.send_message(discord.Object(id=channelID), msg)       
             
-
 if __name__ == '__main__':
     for extension in extensions:
         bot.load_extension(extension)
