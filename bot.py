@@ -31,7 +31,7 @@ async def on_member_update(before, after):
                     roleMention = discord.utils.get(before.server.roles, id=roleID).mention + ', '
                 else:
                     roleMention = ''
-                msg = roleMention + after.mention + ' has just gone live at ' + after.game.url
+                msg = roleMention + after.mention + ' has just gone live at ' + after.game.url + '!'
                 await bot.send_message(discord.Object(id=channelID), msg)       
             
 if __name__ == '__main__':
