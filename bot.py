@@ -5,7 +5,7 @@ from discord.ext import commands
 import os
 
 PREFIX = '!'
-VERSION = '1.3.2'
+VERSION = '1.3.3'
 extensions = ['admin', 'flake', 'misc']
 
 bot = commands.Bot(command_prefix = PREFIX, description = 'ScottBot Version: ' + VERSION, game = discord.Game(name='Overcooked'))
@@ -26,6 +26,8 @@ async def on_member_update(before, after):
         for server in data['servers']:
             if serverID == server['serverID']: # Look for current server
                 channelID = server['channelID']
+                if channelID == None:
+                    return
                 roleID = server['roleID']
                 if roleID != None:
                     roleMention = discord.utils.get(before.server.roles, id=roleID).mention + ', '

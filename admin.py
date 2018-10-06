@@ -7,6 +7,20 @@ class Admin:
         self.bot = bot
     
     @commands.command(pass_context=True)
+    async def allowRole(self, ctx):
+        '''Allows users to add/remove themselves from roles.'''
+        if (not await self.isAdmin(ctx)): # Check Admin
+            await self.bot.say('Only admins may use !enableAddRole.')
+            return
+
+        roles = ctx.message.role_mentions # Get roles mentioned
+        
+        for role in roles: # Check if the role is an admin role 
+            if role.permissions >= discord.Permissions.administrator:
+                # error
+                return
+
+    @commands.command(pass_context=True)
     async def streamPing(self, ctx):
         '''Sets up ScottBot to alert a role(optional) when someone starts streaming.'''
 
@@ -20,6 +34,9 @@ class Admin:
             return
         try:
             roleID = roles[0].id
+            if roles[0].is_everyone:
+                await self.bot.say('Error! The role cannot be @everyone.')
+                return
         except:
             roleID = None
 
@@ -71,13 +88,13 @@ class Admin:
 
         for server in data['servers']: 
             if serverID == server['serverID']: # Check if server is already registered and update if true
-                del server
+                server['channelID'] = None
                 await self.bot.say('StreamPing has been disabled!')
                 with open('data/streamData.json', 'w') as f: # Update JSON
                     json.dump(data, f, indent=2) 
                 return
                 
-        await self.bot.say('StreamPing was not already enabled!')              
+        await self.bot.say('StreamPing was already not enabled!')              
 
     @commands.command(pass_context=True)
     async def clearAll(self, ctx):
