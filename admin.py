@@ -52,10 +52,10 @@ class Admin:
         # S3 Connection/JSON Update
         from boto3.session import Session
         import os
-        ACCESS_KEY_ID = (os.environ.get('ACCESS_KEY_ID', None))
-        ACCESS_SECRET_KEY = (os.environ.get('ACCESS_SECRET_KEY', None))
-        BUCKET_NAME = (os.environ.get('BUCKET_NAME', None))
-        REGION_NAME = (os.environ.get('REGION_NAME', None))
+        ACCESS_KEY_ID = os.environ.get('ACCESS_KEY_ID', None)
+        ACCESS_SECRET_KEY = os.environ.get('ACCESS_SECRET_KEY', None)
+        BUCKET_NAME = os.environ.get('BUCKET_NAME', None)
+        REGION_NAME = os.environ.get('REGION_NAME', None)
         session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
         s3 = session.client('s3')
 
@@ -77,7 +77,7 @@ class Admin:
                     rolesJSON = server['allowedRoles']
                     for role in roleIDS:
                         if role in rolesJSON:
-                            await self.bot.say(discord.utils.get(ctx.message.server.roles, id=role).name + ' has been removed.')
+                            await self.bot.say(discord.utils.get(ctx.message.server.roles, id=role).name + ' has been disabled.')
                             rolesJSON.remove(role)
                         else:
                             await self.bot.say(discord.utils.get(ctx.message.server.roles, id=role).name + ' has been enabled.')
@@ -120,10 +120,10 @@ class Admin:
         # S3 Connection/JSON Update
         from boto3.session import Session
         import os
-        ACCESS_KEY_ID = (os.environ.get('ACCESS_KEY_ID', None))
-        ACCESS_SECRET_KEY = (os.environ.get('ACCESS_SECRET_KEY', None))
-        BUCKET_NAME = (os.environ.get('BUCKET_NAME', None))
-        REGION_NAME = (os.environ.get('REGION_NAME', None))
+        ACCESS_KEY_ID = os.environ.get('ACCESS_KEY_ID', None)
+        ACCESS_SECRET_KEY = os.environ.get('ACCESS_SECRET_KEY', None)
+        BUCKET_NAME = os.environ.get('BUCKET_NAME', None)
+        REGION_NAME = os.environ.get('REGION_NAME', None)
         session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
         s3 = session.client('s3')
         s3.download_file(BUCKET_NAME, 'serverData.json', 'data/serverData.json')
@@ -175,10 +175,10 @@ class Admin:
         # S3 Connection/JSON Update
         from boto3.session import Session
         import os
-        ACCESS_KEY_ID = (os.environ.get('ACCESS_KEY_ID', None))
-        ACCESS_SECRET_KEY = (os.environ.get('ACCESS_SECRET_KEY', None))
-        BUCKET_NAME = (os.environ.get('BUCKET_NAME', None))
-        REGION_NAME = (os.environ.get('REGION_NAME', None))
+        ACCESS_KEY_ID = os.environ.get('ACCESS_KEY_ID', None)
+        ACCESS_SECRET_KEY = os.environ.get('ACCESS_SECRET_KEY', None)
+        BUCKET_NAME = os.environ.get('BUCKET_NAME', None)
+        REGION_NAME = os.environ.get('REGION_NAME', None)
         session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
         s3 = session.client('s3')
         s3.download_file(BUCKET_NAME, 'serverData.json', 'data/serverData.json')
