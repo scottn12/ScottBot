@@ -44,7 +44,7 @@ def createTable(name):
     c.execute('CREATE TABLE IF NOT EXISTS {}(Member TEXT PRIMARY KEY, Count INTEGER)'.format(name))
     c.close()
     conn.close()
-    s3.upload_file('bot_database.db', BUCKET_NAME, 'bot_database.db')
+    s3.upload_file('data/bot_database.db', BUCKET_NAME, 'bot_database.db')
 
 # Incerment flaker count if exists, if not create
 def flakeIncrement(member, serverID):
@@ -69,7 +69,7 @@ def flakeIncrement(member, serverID):
     c.close()
     conn.close()
 
-    s3.upload_file('bot_database.db', BUCKET_NAME, 'bot_database.db')
+    s3.upload_file('data/bot_database.db', BUCKET_NAME, 'bot_database.db')
 
     return rtn
 
