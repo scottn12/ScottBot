@@ -12,6 +12,85 @@ class Misc:
         self.countNum = 0                
 
     @commands.command(pass_context=True)
+    async def role(self, ctx):
+        '''Adds/Removes user to a non-admin role.'''
+        roles = ctx.message.role_mentions # Get mentioned roles
+        roleStr = []
+        try:
+            s = ctx.message.content[6:]
+            roleStr = s.split('"')
+        except:
+            await self.bot.say('Error! Use the following format: !role @role/"role"')
+        if not roles and roleStr == None:
+            await self.bot.say('No role(s) given! Use the following format: !role @role/"role"')
+            return
+
+        allowedRoles = []
+        serverID = ctx.message.server.id
+
+        # S3 Connection/JSON Update
+        from boto3.session import Session
+        import os
+        ACCESS_KEY_ID = os.environ.get('ACCESS_KEY_ID', None)
+        ACCESS_SECRET_KEY = os.environ.get('ACCESS_SECRET_KEY', None)
+        BUCKET_NAME = os.environ.get('BUCKET_NAME', None)
+        REGION_NAME = os.environ.get('REGION_NAME', None)
+        session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
+        s3 = session.client('s3')
+        s3.download_file(BUCKET_NAME, 'serverData.json', 'data/serverData.json')
+
+        import json
+        with open('data/serverData.json','r') as f:
+            data = json.load(f)
+        
+        noRoles = True
+        for server in data['servers']:
+            if serverID == server['serverID']: # Look for current server
+                try:
+                    allowedRoles = server['allowedRoles']
+                    noRoles = False
+                except:
+                    await self.bot.say('No roles enabled!')
+                    return
+            if noRoles:
+                await self.bot.say('No roles enabled!')
+                return
+
+        user = ctx.message.author
+
+        for role in roles:
+            if role.id in allowedRoles:
+                if role in user.roles:
+                    await self.bot.say('You have been removed from ' + role.name + '!')
+                    await self.bot.remove_roles(user, role)
+                else:
+                    await self.bot.say('You have been added to ' + role.name + '!')
+                    await self.bot.add_roles(user, role)
+            else: 
+                await self.bot.say('That role is not enabled to be used with !role.')
+        
+        serverRoles = ctx.message.server.roles
+        
+        for role in roleStr:
+            noRole = True
+            if role == '' or role == ' ' or role[0] == '<':
+                continue
+            for serverRole in serverRoles:
+                if role == serverRole.name:
+                    noRole = False
+                    if serverRole.id in allowedRoles:
+                        if serverRole in user.roles:
+                            await self.bot.say('You have been removed from ' + serverRole.name + '!')
+                            await self.bot.remove_roles(user, serverRole)
+                        else:
+                            await self.bot.say('You have been added to ' + serverRole.name + '!')
+                            await self.bot.add_roles(user, serverRole)
+                    else:
+                        await self.bot.say('That role is not enabled to be used with !role.')
+            if noRole:
+                await self.bot.say(role + ' does not exist.')
+
+    @commands.command(pass_context=True)
     async def help(self, ctx, *args: str):
         '''Shows this message.'''
         return await commands.bot._default_help_command(ctx, *args)

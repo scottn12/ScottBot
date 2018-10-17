@@ -7,18 +7,95 @@ class Admin:
         self.bot = bot
     
     @commands.command(pass_context=True)
-    async def allowRole(self, ctx):
+    async def allowRole(self, ctx): 
         '''Allows users to add/remove themselves from roles.'''
         if (not await self.isAdmin(ctx)): # Check Admin
             await self.bot.say('Only admins may use !enableAddRole.')
             return
 
-        roles = ctx.message.role_mentions # Get roles mentioned
-        
-        for role in roles: # Check if the role is an admin role 
-            if role.permissions >= discord.Permissions.administrator:
-                # error
+        roles = ctx.message.role_mentions # Get mentioned roles
+        roleStr = []
+        try:
+            s = ctx.message.content[11:]
+            roleStr = s.split('"') 
+        except:
+            await self.bot.say('Error! Use the following format: !role @role/"role"')
+
+        if not roles and roleStr == None:
+            await self.bot.say('No role(s) given! Use the following format: !role @role/"role"')
+            return
+
+        roleIDS = []
+        serverRoles = ctx.message.server.roles
+        for role in roles:
+            if role.is_everyone:
+                await self.bot.say('Error! everyone is not a valid role.')
                 return
+            if role.permissions < discord.Permissions.all():
+                roleIDS.append(role.id)
+            else: 
+                await self.bot.say('Error! ' + role.name + ' is an administrator role.')
+
+        for role in roleStr:
+            if role == '' or role == ' ':
+                continue
+            for serverRole in serverRoles:
+                if role == serverRole.name:
+                    if serverRole.is_everyone:
+                        await self.bot.say('Error! everyone is not a valid role.')
+                        return
+                    if serverRole.permissions < discord.Permissions.all():
+                        roleIDS.append(serverRole.id)
+                    else:
+                        await self.bot.say('Error! ' + role.name + ' is an administrator role.')   
+
+        # S3 Connection/JSON Update
+        from boto3.session import Session
+        import os
+        ACCESS_KEY_ID = (os.environ.get('ACCESS_KEY_ID', None))
+        ACCESS_SECRET_KEY = (os.environ.get('ACCESS_SECRET_KEY', None))
+        BUCKET_NAME = (os.environ.get('BUCKET_NAME', None))
+        REGION_NAME = (os.environ.get('REGION_NAME', None))
+        session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
+        s3 = session.client('s3')
+
+        s3.download_file(BUCKET_NAME, 'serverData.json', 'data/serverData.json')
+        import json
+        with open('data/serverData.json','r') as f:
+            data = json.load(f)
+        
+        serverID = ctx.message.server.id
+        newData = {
+            "serverID": serverID,
+            "allowedRoles": roleIDS
+        }
+        
+        newServer = True
+        for server in data['servers']: 
+            if serverID == server['serverID']: # Check if server is already registered and update if true
+                try:
+                    rolesJSON = server['allowedRoles']
+                    for role in roleIDS:
+                        if role in rolesJSON:
+                            await self.bot.say(discord.utils.get(ctx.message.server.roles, id=role).name + ' has been removed.')
+                            rolesJSON.remove(role)
+                        else:
+                            await self.bot.say(discord.utils.get(ctx.message.server.roles, id=role).name + ' has been enabled.')
+                            rolesJSON.append(role)
+                except:
+                    await self.bot.say('All mentioned roles enabled.')
+                    server.append(newData)
+                    newServer = False
+                newServer = False
+
+        if newServer: # Add new Data
+            await self.bot.say('All mentioned roles enabled.')
+            data['servers'].append(newData)
+
+        with open('data/serverData.json', 'w') as f: # Update JSON
+            json.dump(data, f, indent=2)
+        
+        s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
 
     @commands.command(pass_context=True)
     async def streamPing(self, ctx):
@@ -40,9 +117,19 @@ class Admin:
         except:
             roleID = None
 
-        # Update Stream Data
+        # S3 Connection/JSON Update
+        from boto3.session import Session
+        import os
+        ACCESS_KEY_ID = (os.environ.get('ACCESS_KEY_ID', None))
+        ACCESS_SECRET_KEY = (os.environ.get('ACCESS_SECRET_KEY', None))
+        BUCKET_NAME = (os.environ.get('BUCKET_NAME', None))
+        REGION_NAME = (os.environ.get('REGION_NAME', None))
+        session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
+        s3 = session.client('s3')
+        s3.download_file(BUCKET_NAME, 'serverData.json', 'data/serverData.json')
+        
         import json
-        with open('data/streamData.json','r') as f:
+        with open('data/serverData.json','r') as f:
             data = json.load(f)
 
         serverID = ctx.message.server.id
@@ -50,22 +137,27 @@ class Admin:
 
         newData = {
             "serverID": serverID,
-            "channelID": channelID,
-            "roleID": roleID,
+            "streamChannelID": channelID,
+            "streamRoleID": roleID,
         }
         
         newServer = True
         for server in data['servers']: 
             if serverID == server['serverID']: # Check if server is already registered and update if true
-                server['channelID'] = channelID
-                server['roleID'] = roleID
-                newServer = False
+                try:
+                    server['streamChannelID'] = channelID
+                    server['streamRoleID'] = roleID
+                    newServer = False
+                except:
+                    server.append(newData)
+                    newServer = False
 
         if newServer: # Add new Data
             data['servers'].append(newData)
 
-        with open('data/streamData.json', 'w') as f: # Update JSON
+        with open('data/serverData.json', 'w') as f: # Update JSON
             json.dump(data, f, indent=2)
+        s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
 
         if roleID != None:
             await self.bot.say('Stream channel and role set!')
@@ -80,19 +172,34 @@ class Admin:
             await self.bot.say('Only admins may use !disableStreamPing.')
             return
 
+        # S3 Connection/JSON Update
+        from boto3.session import Session
+        import os
+        ACCESS_KEY_ID = (os.environ.get('ACCESS_KEY_ID', None))
+        ACCESS_SECRET_KEY = (os.environ.get('ACCESS_SECRET_KEY', None))
+        BUCKET_NAME = (os.environ.get('BUCKET_NAME', None))
+        REGION_NAME = (os.environ.get('REGION_NAME', None))
+        session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
+        s3 = session.client('s3')
+        s3.download_file(BUCKET_NAME, 'serverData.json', 'data/serverData.json')
+
         import json
-        with open('data/streamData.json','r') as f:
+        with open('data/serverData.json','r') as f:
             data = json.load(f)
         
         serverID = ctx.message.server.id
 
         for server in data['servers']: 
             if serverID == server['serverID']: # Check if server is already registered and update if true
-                server['channelID'] = None
-                await self.bot.say('StreamPing has been disabled!')
-                with open('data/streamData.json', 'w') as f: # Update JSON
-                    json.dump(data, f, indent=2) 
-                return
+                try:
+                    server['streamChannelID'] = None
+                    await self.bot.say('StreamPing has been disabled!')
+                    with open('data/serverData.json', 'w') as f: # Update JSON
+                        json.dump(data, f, indent=2) 
+                    s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
+                    return
+                except: 
+                    await self.bot.say('StreamPing was already not enabled!')  
                 
         await self.bot.say('StreamPing was already not enabled!')              
 
@@ -120,7 +227,7 @@ class Admin:
             await self.bot.delete_message(message)
 
     @commands.command(pass_context=True)
-    async def changePrefix(self, ctx):
+    async def changePrefix(self, ctx): #NOT FINISHED
         if (not await self.isAdmin(ctx)):
             await self.bot.say('Only admins may use !changePrefix.')
             return
@@ -144,6 +251,17 @@ class Admin:
             await self.bot.say('Reset aborted.')
             return
         
+        # S3 Connection/JSON Update
+        from boto3.session import Session
+        import os
+        ACCESS_KEY_ID = os.environ.get('ACCESS_KEY_ID', None)
+        ACCESS_SECRET_KEY = os.environ.get('ACCESS_SECRET_KEY', None)
+        BUCKET_NAME = os.environ.get('BUCKET_NAME', None)
+        REGION_NAME = os.environ.get('REGION_NAME', None)
+        session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
+        s3 = session.client('s3')
+        s3.download_file(BUCKET_NAME, 'bot_database.db', 'data/bot_database.db')
+
         # Reset
         import sqlite3
         conn = sqlite3.connect('data/bot_database.db')
@@ -151,6 +269,8 @@ class Admin:
         c.execute('DROP TABLE IF EXISTS flake'+ctx.message.server.id)
         c.close()
         conn.close()
+
+        s3.upload_file('bot_database.db', BUCKET_NAME, 'bot_database.db')
         
     async def isAdmin(self, ctx):
         user = ctx.message.author
