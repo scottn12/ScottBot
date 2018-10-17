@@ -53,5 +53,4 @@ async def on_member_update(before, after):
 if __name__ == '__main__':
     for extension in extensions:
         bot.load_extension(extension)
-    #bot.run(os.environ.get('BOT_TOKEN', None))
-    bot.run('NDY1OTY5NTU2NjMzMDI2NjA0.Dj28dQ.cMlhLWkkwdKbbRMdIbL3dMftR2Y')
+    bot.run(os.environ.get('BOT_TOKEN', None))
