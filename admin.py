@@ -228,11 +228,11 @@ class Admin:
 
     @commands.command(pass_context=True)
     async def changePrefix(self, ctx): #NOT FINISHED
+        '''Changes the prefix for ScottBot commands.'''
         if (not await self.isAdmin(ctx)):
             await self.bot.say('Only admins may use !changePrefix.')
             return
         import string
-        '''Changes the prefix for ScottBot commands.'''
         newPrefix = ctx.message.content[14:]
         if (newPrefix in string.punctuation):
             await self.bot.say('Prefix successfully changed!')

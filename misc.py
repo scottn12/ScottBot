@@ -13,7 +13,7 @@ class Misc:
 
     @commands.command(pass_context=True)
     async def role(self, ctx):
-        '''Adds/Removes user to a non-admin role.'''
+        '''Adds/Removes user to an allowed role.'''
         roles = ctx.message.role_mentions # Get mentioned roles
         roleStr = []
         try:
