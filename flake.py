@@ -30,11 +30,7 @@ class Flake:
 def createTable(name):
     # S3 Connection/JSON Update
     from boto3.session import Session
-    import os
-    ACCESS_KEY_ID = (os.environ.get('ACCESS_KEY_ID', None))
-    ACCESS_SECRET_KEY = (os.environ.get('ACCESS_SECRET_KEY', None))
-    BUCKET_NAME = (os.environ.get('BUCKET_NAME', None))
-    REGION_NAME = (os.environ.get('REGION_NAME', None))
+    from bot import ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME
     session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
     s3 = session.client('s3')
     s3.download_file(BUCKET_NAME, 'bot_database.db', 'data/bot_database.db')
@@ -50,11 +46,7 @@ def createTable(name):
 def flakeIncrement(member, serverID):
     # S3 Connection/JSON Update
     from boto3.session import Session
-    import os
-    ACCESS_KEY_ID = os.environ.get('ACCESS_KEY_ID', None)
-    ACCESS_SECRET_KEY = os.environ.get('ACCESS_SECRET_KEY', None)
-    BUCKET_NAME = os.environ.get('BUCKET_NAME', None)
-    REGION_NAME = os.environ.get('REGION_NAME', None)
+    from bot import ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME
     session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
     s3 = session.client('s3')
     s3.download_file(BUCKET_NAME, 'bot_database.db', 'data/bot_database.db')
@@ -77,11 +69,7 @@ def flakeIncrement(member, serverID):
 def flakeRead(serverID):
     # S3 Connection/JSON Update
     from boto3.session import Session
-    import os
-    ACCESS_KEY_ID = os.environ.get('ACCESS_KEY_ID', None)
-    ACCESS_SECRET_KEY = os.environ.get('ACCESS_SECRET_KEY', None)
-    BUCKET_NAME = os.environ.get('BUCKET_NAME', None)
-    REGION_NAME = os.environ.get('REGION_NAME', None)
+    from bot import ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME
     session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
     s3 = session.client('s3')
     s3.download_file(BUCKET_NAME, 'bot_database.db', 'data/bot_database.db')

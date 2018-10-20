@@ -30,11 +30,7 @@ class Misc:
 
         # S3 Connection/JSON Update
         from boto3.session import Session
-        import os
-        ACCESS_KEY_ID = os.environ.get('ACCESS_KEY_ID', None)
-        ACCESS_SECRET_KEY = os.environ.get('ACCESS_SECRET_KEY', None)
-        BUCKET_NAME = os.environ.get('BUCKET_NAME', None)
-        REGION_NAME = os.environ.get('REGION_NAME', None)
+        from bot import ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME
         session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
         s3 = session.client('s3')
         s3.download_file(BUCKET_NAME, 'serverData.json', 'data/serverData.json')
@@ -132,7 +128,7 @@ class Misc:
 
     @commands.command(pass_context=True)
     async def poll(self, ctx):
-        '''Creates a poll: !poll "Question" Choices'''
+        '''Creates a poll: !poll "Question" "Choice" "Choice"'''
         # Check for valid input and parse
         try:
             msg = ctx.message.content[6:]
@@ -146,21 +142,25 @@ class Misc:
             return
         #Check if number of choices is valid
         if (len(choices) < 2):
-            await self.bot.say('Error! Too few choices (Min 2).')
+            await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): !poll "Question" "Choice" "Choice"')
             return
         if (len(choices) > 9):
-            await self.bot.say('Error! Too many choices (Max 9).')
+            await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): !poll "Question" "Choice" "Choice"')
             return
         #Print and React
-        poll = await self.bot.say(pollPrint(question, choices))
+        author = ctx.message.author
+        poll = await self.bot.say(pollPrint(question, choices, author))
         emoji = ['1⃣', '2⃣', '3⃣', '4⃣', '5⃣', '6⃣', '7⃣', '8⃣', '9⃣'] # unicode for emoji's 1-9
         for i in range(len(choices)):
             await self.bot.add_reaction(poll, emoji[i])
+        await self.bot.delete_message(ctx.message)
+
+        
 
 # Helper function to print message for !poll
-def pollPrint(question: str, choices: list):
+def pollPrint(question: str, choices: list, author: discord.User):
     emoji = [':one:',':two:',':three:',':four:',':five:',':six:',':seven:',':eight:',':nine:',':ten:']
-    rtn = 'Poll:\n'
+    rtn = 'Poll by ' + author.mention + ':\n'
     rtn += question + '\n'
     for i in range(len(choices)):
         rtn += emoji[i] + ' ' + choices[i] + '\n'

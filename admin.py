@@ -29,7 +29,7 @@ class Admin:
         serverRoles = ctx.message.server.roles
         for role in roles:
             if role.is_everyone:
-                await self.bot.say('Error! everyone is not a valid role.')
+                await self.bot.say('Error! @everyone is not a valid role.')
                 return
             if role.permissions < discord.Permissions.all():
                 roleIDS.append(role.id)
@@ -51,11 +51,7 @@ class Admin:
 
         # S3 Connection/JSON Update
         from boto3.session import Session
-        import os
-        ACCESS_KEY_ID = os.environ.get('ACCESS_KEY_ID', None)
-        ACCESS_SECRET_KEY = os.environ.get('ACCESS_SECRET_KEY', None)
-        BUCKET_NAME = os.environ.get('BUCKET_NAME', None)
-        REGION_NAME = os.environ.get('REGION_NAME', None)
+        from bot import ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME
         session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
         s3 = session.client('s3')
 
@@ -98,8 +94,8 @@ class Admin:
         s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
 
     @commands.command(pass_context=True)
-    async def streamPing(self, ctx):
-        '''Sets up ScottBot to alert a role(optional) when someone starts streaming.'''
+    async def allowStreamPing(self, ctx):
+        '''Allows ScottBot alerts when someone starts streaming.'''
 
         if (not await self.isAdmin(ctx)): #Check Admin
             await self.bot.say('Only admins may use !streamPing.')
@@ -119,11 +115,7 @@ class Admin:
 
         # S3 Connection/JSON Update
         from boto3.session import Session
-        import os
-        ACCESS_KEY_ID = os.environ.get('ACCESS_KEY_ID', None)
-        ACCESS_SECRET_KEY = os.environ.get('ACCESS_SECRET_KEY', None)
-        BUCKET_NAME = os.environ.get('BUCKET_NAME', None)
-        REGION_NAME = os.environ.get('REGION_NAME', None)
+        from bot import ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME
         session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
         s3 = session.client('s3')
         s3.download_file(BUCKET_NAME, 'serverData.json', 'data/serverData.json')
@@ -144,11 +136,18 @@ class Admin:
         newServer = True
         for server in data['servers']: 
             if serverID == server['serverID']: # Check if server is already registered and update if true
-                try:
-                    server['streamChannelID'] = channelID
-                    server['streamRoleID'] = roleID
+                try: # Server has existing stream data
+                    if server['streamChannelID'] == channelID and server['streamRoleID'] == roleID: # Same info -> disable stream ping
+                        server['streamChannelID'] = None
+                        server['streamRoleID'] = None
+                        await self.bot.say('StreamPing disabled!')
+                    else:
+                        server['streamChannelID'] = channelID
+                        server['streamRoleID'] = roleID
+                        await self.bot.say('StreamPing enabled!')
                     newServer = False
-                except:
+                except: # Server has no existing stream data
+                    await self.bot.say('StreamPing enabled!')
                     server.append(newData)
                     newServer = False
 
@@ -157,51 +156,7 @@ class Admin:
 
         with open('data/serverData.json', 'w') as f: # Update JSON
             json.dump(data, f, indent=2)
-        s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
-
-        if roleID != None:
-            await self.bot.say('Stream channel and role set!')
-            return
-        await self.bot.say('Stream channel set!')
-    
-    @commands.command(pass_context=True)
-    async def disableStreamPing(self, ctx):
-        '''Disables streaming alters for this server.'''
-
-        if (not await self.isAdmin(ctx)): #Check Admin
-            await self.bot.say('Only admins may use !disableStreamPing.')
-            return
-
-        # S3 Connection/JSON Update
-        from boto3.session import Session
-        import os
-        ACCESS_KEY_ID = os.environ.get('ACCESS_KEY_ID', None)
-        ACCESS_SECRET_KEY = os.environ.get('ACCESS_SECRET_KEY', None)
-        BUCKET_NAME = os.environ.get('BUCKET_NAME', None)
-        REGION_NAME = os.environ.get('REGION_NAME', None)
-        session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
-        s3 = session.client('s3')
-        s3.download_file(BUCKET_NAME, 'serverData.json', 'data/serverData.json')
-
-        import json
-        with open('data/serverData.json','r') as f:
-            data = json.load(f)
-        
-        serverID = ctx.message.server.id
-
-        for server in data['servers']: 
-            if serverID == server['serverID']: # Check if server is already registered and update if true
-                try:
-                    server['streamChannelID'] = None
-                    await self.bot.say('StreamPing has been disabled!')
-                    with open('data/serverData.json', 'w') as f: # Update JSON
-                        json.dump(data, f, indent=2) 
-                    s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
-                    return
-                except: 
-                    await self.bot.say('StreamPing was already not enabled!')  
-                
-        await self.bot.say('StreamPing was already not enabled!')              
+        s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')              
 
     @commands.command(pass_context=True)
     async def clearAll(self, ctx):
@@ -232,10 +187,12 @@ class Admin:
         if (not await self.isAdmin(ctx)):
             await self.bot.say('Only admins may use !changePrefix.')
             return
+
         import string
         newPrefix = ctx.message.content[14:]
         if (newPrefix in string.punctuation):
             await self.bot.say('Prefix successfully changed!')
+            
         else:
             await self.bot.say('Invalid prefix. New prefix must be a single punctuation character.')
 
@@ -253,11 +210,7 @@ class Admin:
         
         # S3 Connection/JSON Update
         from boto3.session import Session
-        import os
-        ACCESS_KEY_ID = os.environ.get('ACCESS_KEY_ID', None)
-        ACCESS_SECRET_KEY = os.environ.get('ACCESS_SECRET_KEY', None)
-        BUCKET_NAME = os.environ.get('BUCKET_NAME', None)
-        REGION_NAME = os.environ.get('REGION_NAME', None)
+        from bot import ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME
         session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
         s3 = session.client('s3')
         s3.download_file(BUCKET_NAME, 'bot_database.db', 'data/bot_database.db')

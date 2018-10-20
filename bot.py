@@ -5,8 +5,14 @@ from discord.ext import commands
 import os
 
 PREFIX = '!'
-VERSION = '2.0'
+VERSION = '2.1'
 extensions = ['admin', 'flake', 'misc']
+
+# S3 Data
+ACCESS_KEY_ID = os.environ.get('ACCESS_KEY_ID', None)
+ACCESS_SECRET_KEY = os.environ.get('ACCESS_SECRET_KEY', None)
+BUCKET_NAME = os.environ.get('BUCKET_NAME', None)
+REGION_NAME = os.environ.get('REGION_NAME', None)
 
 bot = commands.Bot(command_prefix = PREFIX, description = 'ScottBot Version: ' + VERSION, game = discord.Game(name='Overcooked'))
 
@@ -48,7 +54,7 @@ async def on_member_update(before, after):
                 else:
                     roleMention = ''
                 msg = roleMention + after.mention + ' has just gone live at ' + after.game.url + ' !'
-                await bot.send_message(discord.Object(id=channelID), msg)       
+                await bot.send_message(discord.Object(id=channelID), msg)     
             
 if __name__ == '__main__':
     for extension in extensions:
