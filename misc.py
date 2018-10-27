@@ -39,22 +39,23 @@ class Misc:
         
         noRoles = True
         for server in data['servers']:
+            print(server)
             if serverID == server['serverID']: # Look for current server
                 try:
                     allowedRoles = server['allowedRoles']
                     noRoles = False
                 except:
-                    await self.bot.say('No have been enabled to be used with !role. Use !allowRole to enable roles.')
+                    await self.bot.say('No roles have been enabled to be used with !role. Use !allowRole to enable roles.')
                     return
-            if noRoles:
-                await self.bot.say('No have been enabled to be used with !role. Use !allowRole to enable roles.')
-                return
+        if noRoles:
+            await self.bot.say('No roles have been enabled to be used with !role. Use !allowRole to enable roles.')
+            return
 
         user = ctx.message.author
 
         for role in roles: # Evaluate mentioned roles
             if role.id in allowedRoles:
-                if role in user.roles:
+                if role in (user.roles):
                     await self.bot.say('You have been removed from role "' + role.name + '"!')
                     await self.bot.remove_roles(user, role)
                 else:
@@ -72,8 +73,8 @@ class Misc:
             for serverRole in serverRoles:
                 if (role == serverRole.name):
                     found = True
-                    if serverRole.id in allowedRoles:
-                        if serverRole in user.roles:
+                    if (serverRole.id in allowedRoles):
+                        if (serverRole in user.roles):
                             await self.bot.say('You have been removed from role: "' + serverRole.name + '"!')
                             await self.bot.remove_roles(user, serverRole)
                         else:
@@ -116,7 +117,6 @@ class Misc:
         async for message in self.bot.logs_from(ctx.message.channel):
             if (message.author == self.bot.user or message.content[0] == '!'):
                 messages.append(message)
-                print(message.content)
         if len(messages) > 1:
             await self.bot.delete_messages(messages)
 
