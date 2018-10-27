@@ -8,46 +8,47 @@ class Admin:
     
     @commands.command(pass_context=True)
     async def allowRole(self, ctx): 
-        '''Allows users to add/remove themselves from roles.'''
+        '''Enables/Disables role(s) to be used with !role.'''
         if (not await self.isAdmin(ctx)): # Check Admin
             await self.bot.say('Only admins may use !enableAddRole.')
             return
 
         roles = ctx.message.role_mentions # Get mentioned roles
         roleStr = []
-        try:
-            s = ctx.message.content[11:]
-            roleStr = s.split('"') 
-        except:
-            await self.bot.say('Error! Use the following format: !role @role/"role"')
-
-        if not roles and roleStr == None:
+        if len(ctx.message.content) < 12 and not roles:
             await self.bot.say('No role(s) given! Use the following format: !role @role/"role"')
             return
+        else:
+            s = ctx.message.content[11:]
+            roleStr = s.split('"')
 
-        roleIDS = []
+        roleIDS = [] 
         serverRoles = ctx.message.server.roles
-        for role in roles:
+        for role in roles: # Check mentioned roles
             if role.is_everyone:
-                await self.bot.say('Error! @everyone is not a valid role.')
-                return
+                await self.bot.say('Error! Role: "everyone" is not a valid role.')
+                continue
             if role.permissions < discord.Permissions.all():
                 roleIDS.append(role.id)
             else: 
-                await self.bot.say('Error! ' + role.name + ' is an administrator role.')
+                await self.bot.say('Error! Role: "' + role.name + '" is an administrator role.')
 
-        for role in roleStr:
-            if role == '' or role == ' ':
+        for role in roleStr: # Check quotes roles
+            if role == '' or role == ' ' or role[0]=='<':
                 continue
+            if role == 'everyone':
+                await self.bot.say('Error! Role: "everyone" is not a valid role.')
+                continue
+            found = False
             for serverRole in serverRoles:
-                if role == serverRole.name:
-                    if serverRole.is_everyone:
-                        await self.bot.say('Error! everyone is not a valid role.')
-                        return
+                if (serverRole.name == role):
+                    found = True
                     if serverRole.permissions < discord.Permissions.all():
                         roleIDS.append(serverRole.id)
                     else:
-                        await self.bot.say('Error! ' + role.name + ' is an administrator role.')   
+                        await self.bot.say('Error! Role: "' + role + '" is an administrator role.')
+            if not found:
+                await self.bot.say('Error! Role: "' + role + '" not found!')
 
         # S3 Connection/JSON Update
         from boto3.session import Session
@@ -108,7 +109,7 @@ class Admin:
         try:
             roleID = roles[0].id
             if roles[0].is_everyone:
-                await self.bot.say('Error! The role cannot be @everyone.')
+                await self.bot.say('Error! The role cannot be "everyone".')
                 return
         except:
             roleID = None

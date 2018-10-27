@@ -14,16 +14,14 @@ class Misc:
     @commands.command(pass_context=True)
     async def role(self, ctx):
         '''Adds/Removes user to an allowed role.'''
-        roles = ctx.message.role_mentions # Get mentioned roles
-        roleStr = []
-        try:
-            s = ctx.message.content[6:]
-            roleStr = s.split('"')
-        except:
-            await self.bot.say('Error! Use the following format: !role @role/"role"')
-        if not roles and roleStr == None:
+        if len(ctx.message.content) < 7:
             await self.bot.say('No role(s) given! Use the following format: !role @role/"role"')
             return
+        else:
+            roles = ctx.message.role_mentions # Get mentioned roles
+            roleStr = []
+            s = ctx.message.content[6:]
+            roleStr = s.split('"')
 
         allowedRoles = []
         serverID = ctx.message.server.id
@@ -46,45 +44,45 @@ class Misc:
                     allowedRoles = server['allowedRoles']
                     noRoles = False
                 except:
-                    await self.bot.say('No roles enabled!')
+                    await self.bot.say('No have been enabled to be used with !role. Use !allowRole to enable roles.')
                     return
             if noRoles:
-                await self.bot.say('No roles enabled!')
+                await self.bot.say('No have been enabled to be used with !role. Use !allowRole to enable roles.')
                 return
 
         user = ctx.message.author
 
-        for role in roles:
+        for role in roles: # Evaluate mentioned roles
             if role.id in allowedRoles:
                 if role in user.roles:
-                    await self.bot.say('You have been removed from ' + role.name + '!')
+                    await self.bot.say('You have been removed from role "' + role.name + '"!')
                     await self.bot.remove_roles(user, role)
                 else:
-                    await self.bot.say('You have been added to ' + role.name + '!')
+                    await self.bot.say('You have been added to role "' + role.name + '"!')
                     await self.bot.add_roles(user, role)
             else: 
-                await self.bot.say('That role is not enabled to be used with !role.')
+                await self.bot.say('Error! Role: "' + role.name + '" is not enabled to be used with !role.')
         
         serverRoles = ctx.message.server.roles
         
-        for role in roleStr:
-            noRole = True
+        for role in roleStr: # Evaluate quoted roles
+            found = False
             if role == '' or role == ' ' or role[0] == '<':
                 continue
             for serverRole in serverRoles:
-                if role == serverRole.name:
-                    noRole = False
+                if (role == serverRole.name):
+                    found = True
                     if serverRole.id in allowedRoles:
                         if serverRole in user.roles:
-                            await self.bot.say('You have been removed from ' + serverRole.name + '!')
+                            await self.bot.say('You have been removed from role: "' + serverRole.name + '"!')
                             await self.bot.remove_roles(user, serverRole)
                         else:
-                            await self.bot.say('You have been added to ' + serverRole.name + '!')
+                            await self.bot.say('You have been added to role: "' + serverRole.name + '"!')
                             await self.bot.add_roles(user, serverRole)
                     else:
-                        await self.bot.say('That role is not enabled to be used with !role.')
-            if noRole:
-                await self.bot.say(role + ' does not exist.')
+                        await self.bot.say('Error! Role: "' + serverRole.name + '" is not enabled to be used with !role.')
+            if not found:
+                await self.bot.say('Error! Role: "' + role + '" not found!')
 
     @commands.command(pass_context=True)
     async def help(self, ctx, *args: str):
@@ -153,9 +151,7 @@ class Misc:
         emoji = ['1⃣', '2⃣', '3⃣', '4⃣', '5⃣', '6⃣', '7⃣', '8⃣', '9⃣'] # unicode for emoji's 1-9
         for i in range(len(choices)):
             await self.bot.add_reaction(poll, emoji[i])
-        await self.bot.delete_message(ctx.message)
-
-        
+        await self.bot.delete_message(ctx.message)    
 
 # Helper function to print message for !poll
 def pollPrint(question: str, choices: list, author: discord.User):
