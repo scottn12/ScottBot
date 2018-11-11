@@ -79,9 +79,9 @@ class Admin:
                         else:
                             await self.bot.say(discord.utils.get(ctx.message.server.roles, id=role).name + ' has been enabled.')
                             rolesJSON.append(role)
-                except:
+                except: # Server registered, but no role data
                     await self.bot.say('All mentioned roles enabled.')
-                    server.append(newData)
+                    server.update(newData)
                     newServer = False
                 newServer = False
 
@@ -149,7 +149,7 @@ class Admin:
                     newServer = False
                 except: # Server has no existing stream data
                     await self.bot.say('StreamPing enabled!')
-                    server.append(newData)
+                    server.update(newData)
                     newServer = False
 
         if newServer: # Add new Data
@@ -183,19 +183,60 @@ class Admin:
             await self.bot.delete_message(message)
 
     @commands.command(pass_context=True)
-    async def changePrefix(self, ctx): #NOT FINISHED
-        '''Changes the prefix for ScottBot commands.'''
+    async def resetData(self, ctx):
+        '''Permanently resets all ScottBot related data.'''
         if (not await self.isAdmin(ctx)):
-            await self.bot.say('Only admins may use !changePrefix.')
+            await self.bot.say('Only admins may use !resetData.')
             return
 
-        import string
-        newPrefix = ctx.message.content[14:]
-        if (newPrefix in string.punctuation):
-            await self.bot.say('Prefix successfully changed!')
-            
-        else:
-            await self.bot.say('Invalid prefix. New prefix must be a single punctuation character.')
+        await self.bot.say("Are you sure you want to permanently reset all ScottBot data for this server? Type 'Y' to confirm.")
+        if (not await self.confirmAction(ctx)):
+            await self.bot.say('Reset aborted.')
+            return
+
+        # S3 Connection/JSON Update
+        from boto3.session import Session
+        from bot import ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME
+        session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
+        s3 = session.client('s3')
+        s3.download_file(BUCKET_NAME, 'serverData.json', 'data/serverData.json')
+        
+        import json
+        with open('data/serverData.json','r') as f:
+            data = json.load(f)
+
+        serverID = ctx.message.server.id
+        
+        newServer = True
+        for server in data['servers']:
+            if serverID == server['serverID']: # Look for server
+                data['servers'].remove(server)
+                await self.bot.say('Server successfully data reset!')
+                newServer = False
+
+        if newServer: # Add new Data
+            await self.bot.say('No server data found!')
+            return
+
+        with open('data/serverData.json', 'w') as f: # Update JSON
+            json.dump(data, f, indent=2)
+        s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
+
+    #@commands.command(pass_context=True)
+    #async def changePrefix(self, ctx): #NOT FINISHED
+    #    '''Changes the prefix for ScottBot commands.'''
+    #    if (not await self.isAdmin(ctx)):
+    #        await self.bot.say('Only admins may use !changePrefix.')
+    #        return
+    #
+    #    import string
+    #    newPrefix = ctx.message.content[14:]
+    #    if (newPrefix in string.punctuation):
+    #        #await self.bot.say('Prefix successfully changed!')
+    #        x = 2 #nothing
+    #    else:
+    #        await self.bot.say('Invalid prefix. New prefix must be a single punctuation character.')
+    #        return
 
     @commands.command(pass_context=True)
     async def flakeReset(self, ctx):

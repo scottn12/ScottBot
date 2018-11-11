@@ -39,7 +39,6 @@ class Misc:
         
         noRoles = True
         for server in data['servers']:
-            print(server)
             if serverID == server['serverID']: # Look for current server
                 try:
                     allowedRoles = server['allowedRoles']
@@ -57,10 +56,18 @@ class Misc:
             if role.id in allowedRoles:
                 if role in (user.roles):
                     await self.bot.say('You have been removed from role "' + role.name + '"!')
-                    await self.bot.remove_roles(user, role)
+                    try:
+                        await self.bot.remove_roles(user, role)
+                    except:
+                        await self.bot.say('Error! Permission denied. Try checking ScottBot\'s permissions')
+                        return
                 else:
                     await self.bot.say('You have been added to role "' + role.name + '"!')
-                    await self.bot.add_roles(user, role)
+                    try:
+                        await self.bot.add_roles(user, role)
+                    except:
+                        await self.bot.say('Error! Permission denied. Try checking ScottBot\'s permissions')
+                        return
             else: 
                 await self.bot.say('Error! Role: "' + role.name + '" is not enabled to be used with !role.')
         
@@ -152,6 +159,85 @@ class Misc:
         for i in range(len(choices)):
             await self.bot.add_reaction(poll, emoji[i])
         await self.bot.delete_message(ctx.message)    
+
+    @commands.command(pass_context=True)
+    async def addQuote(self, ctx):
+        '''Adds a quote to the list of quotes.'''
+        quote = ctx.message.content[10:]
+        if len(quote) == 0:
+            await self.bot.say('Error! No quote was provided.')
+            return
+        
+        # S3 Connection/JSON Update
+        from boto3.session import Session
+        from bot import ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME
+        session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
+        s3 = session.client('s3')
+        s3.download_file(BUCKET_NAME, 'serverData.json', 'data/serverData.json')
+
+        import json
+        with open('data/serverData.json','r') as f:
+            data = json.load(f)
+
+        serverID = ctx.message.server.id
+        newData = {
+            "serverID": serverID,
+            "quotes": [quote]
+        }
+        
+        newServer = True
+        for server in data['servers']: 
+            if serverID == server['serverID']: # Check if server is already registered and update if true
+                try:
+                    server['quotes'].append(quote)
+                except: # Server registered, but no role data
+                    server.update(newData)
+                    newServer = False
+                newServer = False
+
+        if newServer: # Add new Data
+            data['servers'].append(newData)
+
+        with open('data/serverData.json', 'w') as f: # Update JSON
+            json.dump(data, f, indent=2)
+        
+        s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
+
+        await self.bot.say('Quote added!')
+
+    @commands.command(pass_context=True)
+    async def quote(self, ctx):
+        '''ScottBot says a random quote.'''
+
+        # S3 Connection/JSON Update
+        from boto3.session import Session
+        from bot import ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME
+        session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
+        s3 = session.client('s3')
+        s3.download_file(BUCKET_NAME, 'serverData.json', 'data/serverData.json')
+
+        import json
+        with open('data/serverData.json','r') as f:
+            data = json.load(f)
+        
+        serverID = ctx.message.server.id
+
+        noQuotes = True
+        for server in data['servers']:
+            if serverID == server['serverID']: # Look for current server
+                try:
+                    quotes = server['quotes']
+                    noQuotes = False
+                except: # Redundant code?
+                    await self.bot.say('Error! No quotes have been added! Use !addQuote to add quotes.')
+                    return
+        if noQuotes:
+            await self.bot.say('Error! No quotes have been added! Use !addQuote to add quotes.')
+            return
+
+        import random
+        rng = random.randint(0, len(quotes)-1)
+        await self.bot.say(quotes[rng])
 
 # Helper function to print message for !poll
 def pollPrint(question: str, choices: list, author: discord.User):
