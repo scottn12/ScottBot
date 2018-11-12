@@ -1,29 +1,43 @@
 # ScottBot
-Discord Bot
+ScottBot is a bot made for discord servers using python, sqlite, AWS S3, and JSON.
 
 To add ScottBot to your server click the following link:
 https://discordapp.com/oauth2/authorize?client_id=465969556633026604&scope=bot
 
-Please note some commands require administrative permissions.
+Please note many commands require administrative permissions.
 
-# ScottBot Version: 2.2.1
+**ScottBot Version: 2.2.2**
 
-Admin:
-  *allowRole       Enables/Disables role(s) to be used with !role.
-  *allowStreamPing Allows ScottBot alerts when someone starts streaming.
-  *clearAll        Clears all messages in the text channel.
-  *flakeReset      Resets the flakeRank.
-  *resetData       Permanently resets all ScottBot related data.
-Flake:
-  *flake           Increments the flake count for all flakers mentioned.
-  *flakeRank       Displays the flake standings.
-Misc:
-  *addQuote        Adds a quote to the list of quotes.
-  *clear           Deletes all commands and messages from ScottBot.
-  *hello           ScottBot greets you.
-  *help            Shows this message.
-  *nanoDankster    A sad story.
-  *poll            Creates a poll: !poll "Question" "Choice" "Choice"
-  *quote           ScottBot says a random quote.
-  *role            Adds/Removes user to an allowed role.
-  *version         Prints ScottBot Version.
+Commands:
+
+  * !help - Shows all ScottBot commands and descriptions.
+
+  * !allowRole - Enables/Disables role(s) to be used with !role.
+  
+  * !role - Adds/Removes user to an allowed role.
+  
+  * !allowStreamPing - Allows ScottBot to send an alert when someone starts streaming on twitch. Optinally it can alert a specific role.
+  
+  * !clearAll - Clears all messages in the text channel.
+  
+  * !clear - Deletes all commands sent and all messages from ScottBot in a text channel.
+  
+  * !flake - Increments the flake count for all users mentioned.
+  
+  * !flakeRank - Displays the flake standings.
+  
+  * flakeReset - Resets the flakeRank.
+  
+  * !resetData - Permanently resets all ScottBot related data for the server.
+
+  * !addQuote - Adds a quote to the list of quotes.
+  
+  * !quote - ScottBot says a random quote from the list of quotes.
+  
+  * !poll - Creates a poll using reactions. Used with the following format (Minimum of 2 choices, maximum of 9 choices): !poll "Question" "Choice" "Choice"
+  
+  * !version - Displays ScottBot Version.
+  
+  * !hello ScottBot greets you.
+  
+  * !nanoDankster - A sad story.
