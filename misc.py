@@ -158,7 +158,10 @@ class Misc:
         emoji = ['1⃣', '2⃣', '3⃣', '4⃣', '5⃣', '6⃣', '7⃣', '8⃣', '9⃣'] # unicode for emoji's 1-9
         for i in range(len(choices)):
             await self.bot.add_reaction(poll, emoji[i])
-        await self.bot.delete_message(ctx.message)    
+        try:
+            await self.bot.delete_message(ctx.message)
+        except:
+            print('need admin D:')  
 
     @commands.command(pass_context=True)
     async def addQuote(self, ctx):
@@ -168,6 +171,11 @@ class Misc:
             await self.bot.say('Error! No quote was provided.')
             return
         
+        mentions = ctx.message.mentions
+        if mentions:
+            await self.bot.say('Error! You cannot mention someone in a quote.')
+            return
+
         # S3 Connection/JSON Update
         from boto3.session import Session
         from bot import ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME
