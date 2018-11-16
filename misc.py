@@ -214,7 +214,7 @@ class Misc:
         await self.bot.say('Quote added!')
 
     @commands.command(pass_context=True)
-    async def quote(self, ctx):
+    async def quote(self, ctx, arg=1):
         '''ScottBot says a random quote.'''
 
         # S3 Connection/JSON Update
@@ -243,9 +243,14 @@ class Misc:
             await self.bot.say('Error! No quotes have been added! Use !addQuote to add quotes.')
             return
 
+        if (arg > 5):
+            await self.bot.say('Up to 5 quotes are allowed at once.')
+            arg = 5
+
         import random
-        rng = random.randint(0, len(quotes)-1)
-        await self.bot.say(quotes[rng])
+        for i in range(arg):
+            rng = random.randint(0, len(quotes)-1)
+            await self.bot.say(quotes[rng])
 
 # Helper function to print message for !poll
 def pollPrint(question: str, choices: list, author: discord.User):

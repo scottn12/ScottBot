@@ -6,7 +6,7 @@ https://discordapp.com/oauth2/authorize?client_id=465969556633026604&scope=bot
 
 Please note many commands require administrative permissions.
 
-**ScottBot Version: 2.2.2**
+**ScottBot Version: 2.2.3**
 
 Commands:
 
