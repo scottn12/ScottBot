@@ -5,7 +5,7 @@ from discord.ext import commands
 import os
 
 PREFIX = '!'
-VERSION = '2.2.3'
+VERSION = '2.2.5'
 extensions = ['admin', 'flake', 'misc']
 
 # S3 Data

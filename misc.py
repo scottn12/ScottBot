@@ -8,8 +8,7 @@ class Misc:
     '''Miscellaneous commands anyone can use.'''
     def __init__(self, bot):
         self.bot = bot
-        self.bot.remove_command('help')
-        self.countNum = 0                
+        self.bot.remove_command('help')         
 
     @commands.command(pass_context=True)
     async def role(self, ctx):
@@ -116,20 +115,6 @@ class Misc:
         msg += 'Unfortunately, ' + scott + ' is stupid and forgot to hide ScottBot\'s token in the source code. '
         msg += 'This allowed mallicious bot NanoDankster to take control of the ScottBot, erasing everything from the server. Don\'t be like ' + scott + '.'
         await self.bot.say(msg)
-
-    @commands.command(pass_context=True)
-    async def clear(self, ctx):
-        '''Deletes all commands and messages from ScottBot.'''
-        messages = []
-        async for message in self.bot.logs_from(ctx.message.channel):
-            if (message.author == self.bot.user or message.content[0] == '!'):
-                messages.append(message)
-        if len(messages) > 1:
-            await self.bot.delete_messages(messages)
-
-        # For messages older than 14 days
-        for message in messages:
-            await self.bot.delete_message(message)
 
     @commands.command(pass_context=True)
     async def poll(self, ctx):
