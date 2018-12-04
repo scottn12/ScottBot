@@ -9,10 +9,10 @@ VERSION = '2.2.3'
 extensions = ['admin', 'flake', 'misc']
 
 # S3 Data
-ACCESS_KEY_ID = os.environ.get('ACCESS_KEY_ID', None)
-ACCESS_SECRET_KEY = os.environ.get('ACCESS_SECRET_KEY', None)
-BUCKET_NAME = os.environ.get('BUCKET_NAME', None)
-REGION_NAME = os.environ.get('REGION_NAME', None)
+ACCESS_KEY_ID = 'AKIAIQXM5UGD6VMSM5FQ'#os.environ.get('ACCESS_KEY_ID', None)
+ACCESS_SECRET_KEY = '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'#os.environ.get('ACCESS_SECRET_KEY', None)
+BUCKET_NAME = 'scottbot-data'#os.environ.get('BUCKET_NAME', None)
+REGION_NAME = 'us-east-2'#os.environ.get('REGION_NAME', None)
 
 bot = commands.Bot(command_prefix = PREFIX, description = 'ScottBot Version: ' + VERSION)
 
@@ -29,11 +29,6 @@ async def on_member_update(before, after):
 
         # S3 Connection/JSON Update
         from boto3.session import Session
-        import os
-        ACCESS_KEY_ID = os.environ.get('ACCESS_KEY_ID', None)
-        ACCESS_SECRET_KEY = os.environ.get('ACCESS_SECRET_KEY', None)
-        BUCKET_NAME = os.environ.get('BUCKET_NAME', None)
-        REGION_NAME = os.environ.get('REGION_NAME', None)
         session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
         s3 = session.client('s3')
         s3.download_file(BUCKET_NAME, 'serverData.json', 'data/serverData.json')
@@ -61,4 +56,4 @@ async def on_member_update(before, after):
 if __name__ == '__main__':
     for extension in extensions:
         bot.load_extension(extension)
-    bot.run(os.environ.get('BOT_TOKEN', None))
+    bot.run('NDY1OTY5NTU2NjMzMDI2NjA0.Dj28dQ.cMlhLWkkwdKbbRMdIbL3dMftR2Y')#os.environ.get('BOT_TOKEN', None))

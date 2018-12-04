@@ -160,6 +160,24 @@ class Admin:
         s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')              
 
     @commands.command(pass_context=True)
+    async def clear(self, ctx):
+        '''Deletes all commands and messages from ScottBot.'''
+        if (not await self.isAdmin(ctx)):
+            await self.bot.say('Only admins may use !clear.')
+            return
+        messages = []
+        async for message in self.bot.logs_from(ctx.message.channel):
+            if (message.author == self.bot.user or message.content[0] == '!'):
+                messages.append(message)
+        try:
+            if len(messages) > 1:
+                await self.bot.delete_messages(messages)
+        except:
+            # For messages older than 14 days
+            async for message in self.bot.logs_from(ctx.message.channel):
+                await self.bot.delete_message(message)
+
+    @commands.command(pass_context=True)
     async def clearAll(self, ctx):
         '''Clears all messages in the text channel.'''
         if (not await self.isAdmin(ctx)):
@@ -175,12 +193,13 @@ class Admin:
         messages = []
         async for message in self.bot.logs_from(ctx.message.channel):
             messages.append(message)
-        if len(messages) > 1:
-            await self.bot.delete_messages(messages)
-
-        # For messages older than 14 days
-        async for message in self.bot.logs_from(ctx.message.channel):
-            await self.bot.delete_message(message)
+        try:
+            if len(messages) > 1:
+                await self.bot.delete_messages(messages)
+        except:
+            # For messages older than 14 days
+            async for message in self.bot.logs_from(ctx.message.channel):
+                await self.bot.delete_message(message)
 
     @commands.command(pass_context=True)
     async def resetData(self, ctx):

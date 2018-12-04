@@ -214,7 +214,7 @@ class Misc:
         await self.bot.say('Quote added!')
 
     @commands.command(pass_context=True)
-    async def quote(self, ctx, arg=1):
+    async def quote(self, ctx, arg='1'):
         '''ScottBot says a random quote.'''
 
         # S3 Connection/JSON Update
@@ -243,12 +243,18 @@ class Misc:
             await self.bot.say('Error! No quotes have been added! Use !addQuote to add quotes.')
             return
 
-        if (arg > 5):
-            await self.bot.say('Up to 5 quotes are allowed at once.')
+        # Check if int was passed
+        try:
+            arg = int(arg)
+        except:
+            arg = 1
+
+        if arg > 5:
+            await self.bot.say('**Up to 5 quotes are allowed at once.**')
             arg = 5
 
         import random
-        for i in range(arg):
+        for _ in range(arg):
             rng = random.randint(0, len(quotes)-1)
             await self.bot.say(quotes[rng])
 
