@@ -2,6 +2,8 @@ import discord
 from discord.ext import commands
 import sqlite3
 import os
+from boto3.session import Session
+from bot import ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME, s3
 
 class Flake:
     '''Commands for Flakers.'''
@@ -28,13 +30,6 @@ class Flake:
 
 # Setup Database  #NO LONGER NEEDED
 def createTable(name):
-    # S3 Connection/JSON Update
-    from boto3.session import Session
-    from bot import ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME
-    session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
-    s3 = session.client('s3')
-    s3.download_file(BUCKET_NAME, 'bot_database.db', 'data/bot_database.db')
-    
     conn = sqlite3.connect('data/bot_database.db')
     c = conn.cursor()
     c.execute('CREATE TABLE IF NOT EXISTS {}(Member TEXT PRIMARY KEY, Count INTEGER)'.format(name))
@@ -44,13 +39,6 @@ def createTable(name):
 
 # Incerment flaker count if exists, if not create
 def flakeIncrement(member, serverID):
-    # S3 Connection/JSON Update
-    from boto3.session import Session
-    from bot import ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME
-    session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
-    s3 = session.client('s3')
-    s3.download_file(BUCKET_NAME, 'bot_database.db', 'data/bot_database.db')
-    
     conn = sqlite3.connect('data/bot_database.db')
     c = conn.cursor()
     c.execute('UPDATE flake'+serverID+' SET Count = Count + 1 WHERE member = ?', (member,))
@@ -67,13 +55,6 @@ def flakeIncrement(member, serverID):
 
 # Read from DB - output is a string formatted for discord text
 def flakeRead(serverID):
-    # S3 Connection/JSON Update
-    from boto3.session import Session
-    from bot import ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME
-    session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
-    s3 = session.client('s3')
-    s3.download_file(BUCKET_NAME, 'bot_database.db', 'data/bot_database.db')
-
     conn = sqlite3.connect('data/bot_database.db')
     c = conn.cursor()
     rtn = '```Flaker:\t\t\t\t\tCount:\n'

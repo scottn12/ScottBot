@@ -1,5 +1,8 @@
 import discord
 from discord.ext import commands
+from boto3.session import Session
+from bot import ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME, s3
+import json
 
 class Admin:
     '''Commands for server administrators only.'''
@@ -49,15 +52,7 @@ class Admin:
                         await self.bot.say('Error! Role: "' + role + '" is an administrator role.')
             if not found:
                 await self.bot.say('Error! Role: "' + role + '" not found!')
-
-        # S3 Connection/JSON Update
-        from boto3.session import Session
-        from bot import ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME
-        session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
-        s3 = session.client('s3')
-
-        s3.download_file(BUCKET_NAME, 'serverData.json', 'data/serverData.json')
-        import json
+        
         with open('data/serverData.json','r') as f:
             data = json.load(f)
         
@@ -114,14 +109,6 @@ class Admin:
         except:
             roleID = None
 
-        # S3 Connection/JSON Update
-        from boto3.session import Session
-        from bot import ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME
-        session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
-        s3 = session.client('s3')
-        s3.download_file(BUCKET_NAME, 'serverData.json', 'data/serverData.json')
-        
-        import json
         with open('data/serverData.json','r') as f:
             data = json.load(f)
 
@@ -213,14 +200,6 @@ class Admin:
             await self.bot.say('Reset aborted.')
             return
 
-        # S3 Connection/JSON Update
-        from boto3.session import Session
-        from bot import ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME
-        session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
-        s3 = session.client('s3')
-        s3.download_file(BUCKET_NAME, 'serverData.json', 'data/serverData.json')
-        
-        import json
         with open('data/serverData.json','r') as f:
             data = json.load(f)
 
@@ -268,13 +247,6 @@ class Admin:
         if (not await self.confirmAction(ctx)):
             await self.bot.say('Reset aborted.')
             return
-        
-        # S3 Connection/JSON Update
-        from boto3.session import Session
-        from bot import ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME
-        session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
-        s3 = session.client('s3')
-        s3.download_file(BUCKET_NAME, 'bot_database.db', 'data/bot_database.db')
 
         # Reset
         import sqlite3

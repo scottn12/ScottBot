@@ -3,12 +3,21 @@ from discord.ext import commands
 from discord.ext.commands import Bot
 import asyncio
 from bot import VERSION
+from boto3.session import Session
+from bot import ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME, s3
+import json
 
 class Misc:
     '''Miscellaneous commands anyone can use.'''
     def __init__(self, bot):
         self.bot = bot
-        self.bot.remove_command('help')         
+        self.bot.remove_command('help')
+        self.bot.remove_command('clear') # remove?
+ 
+    @commands.command(pass_context=True)
+    async def help(self, ctx, *args: str):
+        '''Shows this message.'''
+        return await commands.bot._default_help_command(ctx, *args)
 
     @commands.command(pass_context=True)
     async def role(self, ctx):
@@ -24,15 +33,7 @@ class Misc:
 
         allowedRoles = []
         serverID = ctx.message.server.id
-
-        # S3 Connection/JSON Update
-        from boto3.session import Session
-        from bot import ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME
-        session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
-        s3 = session.client('s3')
-        s3.download_file(BUCKET_NAME, 'serverData.json', 'data/serverData.json')
-
-        import json
+        
         with open('data/serverData.json','r') as f:
             data = json.load(f)
         
@@ -92,9 +93,8 @@ class Misc:
                 await self.bot.say('Error! Role: "' + role + '" not found!')
 
     @commands.command(pass_context=True)
-    async def help(self, ctx, *args: str):
-        '''Shows this message.'''
-        return await commands.bot._default_help_command(ctx, *args)
+    async def featureRequest(self, ctx, *args):
+        await ctx.send('{} arguments: {}'.format(len(args), ', '.join(args)))
     
     @commands.command(pass_context=False)
     async def version(self):
@@ -117,38 +117,6 @@ class Misc:
         await self.bot.say(msg)
 
     @commands.command(pass_context=True)
-    async def poll(self, ctx):
-        '''Creates a poll: !poll "Question" "Choice" "Choice"'''
-        # Check for valid input and parse
-        try:
-            msg = ctx.message.content[6:]
-            msg = msg.split('" "') #Split questions and choices
-            msg[0] = msg[0].replace('"','') #Remove remaning quotations
-            msg[-1] = msg[-1].replace('"','')
-            question = msg[0]
-            choices = msg[1:]
-        except:
-            await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): !poll "Question" "Choice" "Choice"')
-            return
-        #Check if number of choices is valid
-        if (len(choices) < 2):
-            await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): !poll "Question" "Choice" "Choice"')
-            return
-        if (len(choices) > 9):
-            await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): !poll "Question" "Choice" "Choice"')
-            return
-        #Print and React
-        author = ctx.message.author
-        poll = await self.bot.say(pollPrint(question, choices, author))
-        emoji = ['1⃣', '2⃣', '3⃣', '4⃣', '5⃣', '6⃣', '7⃣', '8⃣', '9⃣'] # unicode for emoji's 1-9
-        for i in range(len(choices)):
-            await self.bot.add_reaction(poll, emoji[i])
-        try:
-            await self.bot.delete_message(ctx.message)
-        except:
-            print('need admin D:')  
-
-    @commands.command(pass_context=True)
     async def addQuote(self, ctx):
         '''Adds a quote to the list of quotes.'''
         quote = ctx.message.content[10:]
@@ -161,14 +129,6 @@ class Misc:
             await self.bot.say('Error! You cannot mention someone in a quote.')
             return
 
-        # S3 Connection/JSON Update
-        from boto3.session import Session
-        from bot import ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME
-        session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
-        s3 = session.client('s3')
-        s3.download_file(BUCKET_NAME, 'serverData.json', 'data/serverData.json')
-
-        import json
         with open('data/serverData.json','r') as f:
             data = json.load(f)
 
@@ -202,14 +162,6 @@ class Misc:
     async def quote(self, ctx, arg='1'):
         '''ScottBot says a random quote.'''
 
-        # S3 Connection/JSON Update
-        from boto3.session import Session
-        from bot import ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME
-        session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key= ACCESS_SECRET_KEY, region_name= REGION_NAME)
-        s3 = session.client('s3')
-        s3.download_file(BUCKET_NAME, 'serverData.json', 'data/serverData.json')
-
-        import json
         with open('data/serverData.json','r') as f:
             data = json.load(f)
         
@@ -242,6 +194,38 @@ class Misc:
         for _ in range(arg):
             rng = random.randint(0, len(quotes)-1)
             await self.bot.say(quotes[rng])
+
+    @commands.command(pass_context=True)
+    async def poll(self, ctx):
+        '''Creates a poll: !poll "Question" "Choice" "Choice"'''
+        # Check for valid input and parse
+        try:
+            msg = ctx.message.content[6:]
+            msg = msg.split('" "') #Split questions and choices
+            msg[0] = msg[0].replace('"','') #Remove remaning quotations
+            msg[-1] = msg[-1].replace('"','')
+            question = msg[0]
+            choices = msg[1:]
+        except:
+            await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): !poll "Question" "Choice" "Choice"')
+            return
+        #Check if number of choices is valid
+        if (len(choices) < 2):
+            await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): !poll "Question" "Choice" "Choice"')
+            return
+        if (len(choices) > 9):
+            await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): !poll "Question" "Choice" "Choice"')
+            return
+        #Print and React
+        author = ctx.message.author
+        poll = await self.bot.say(pollPrint(question, choices, author))
+        emoji = ['1⃣', '2⃣', '3⃣', '4⃣', '5⃣', '6⃣', '7⃣', '8⃣', '9⃣'] # unicode for emoji's 1-9
+        for i in range(len(choices)):
+            await self.bot.add_reaction(poll, emoji[i])
+        try:
+            await self.bot.delete_message(ctx.message)
+        except:
+            print('need admin D:')  
 
 # Helper function to print message for !poll
 def pollPrint(question: str, choices: list, author: discord.User):
