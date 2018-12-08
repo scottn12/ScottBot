@@ -22,7 +22,7 @@ bot = commands.Bot(command_prefix = PREFIX, description = 'ScottBot Version: ' +
 
 @bot.event
 async def on_ready():
-    # Load Files
+    # Load S3 Files
     print('Loading JSON...')
     s3.download_file(BUCKET_NAME, 'serverData.json', 'data/serverData.json')
     print('Loading DB...')
