@@ -7,7 +7,7 @@ from boto3.session import Session
 import json
 
 PREFIX = '!'
-VERSION = '2.3'
+VERSION = '2.3.1'
 extensions = ['admin', 'flake', 'misc']
 
 # S3 Setup
@@ -27,6 +27,8 @@ async def on_ready():
     s3.download_file(BUCKET_NAME, 'serverData.json', 'data/serverData.json')
     print('Loading DB...')
     s3.download_file(BUCKET_NAME, 'bot_database.db', 'data/bot_database.db')
+    print('Loading Requests...')
+    s3.download_file(BUCKET_NAME, 'requests.txt', 'data/requests.txt')
 
     await bot.change_presence(game=discord.Game(name='Overcooked'))
     print(bot.user.name + ' Version: ' + VERSION + " is ready!")

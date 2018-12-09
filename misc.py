@@ -93,8 +93,18 @@ class Misc:
                 await self.bot.say('Error! Role: "' + role + '" not found!')
 
     @commands.command(pass_context=True)
-    async def featureRequest(self, ctx, *args):
-        await ctx.send('{} arguments: {}'.format(len(args), ', '.join(args)))
+    async def request(self, ctx):
+        '''Request a feature you would like added to ScottBot.'''
+        msg = ctx.message.content[9:]
+        if len(msg) == 0:
+            await self.bot.say('Error! No request provided.')
+            return
+        
+        req = '\"{}\" - {}\n'.format(msg, ctx.message.author.name)
+
+        with open('data/requests.txt', 'a') as f:
+            f.write(req)
+        s3.upload_file('data/requests.txt', BUCKET_NAME, 'requests.txt')
     
     @commands.command(pass_context=False)
     async def version(self):
