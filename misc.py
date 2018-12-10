@@ -2,10 +2,11 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import Bot
 import asyncio
-from bot import VERSION
+from bot import VERSION, ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME, s3
 from boto3.session import Session
-from bot import ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME, s3
 import json
+import smtplib 
+import os
 
 class Misc:
     '''Miscellaneous commands anyone can use.'''
@@ -99,12 +100,27 @@ class Misc:
         if len(msg) == 0:
             await self.bot.say('Error! No request provided.')
             return
-        
-        req = '\"{}\" - {}\n'.format(msg, ctx.message.author.name)
 
+        # Append to file
+        req = '\"{}\" - {}\n'.format(msg, ctx.message.author.name)
         with open('data/requests.txt', 'a') as f:
             f.write(req)
         s3.upload_file('data/requests.txt', BUCKET_NAME, 'requests.txt')
+
+        emailContent = 'Subject: New Feature Request for ScottBot\n\nUser: {}\nServer: {}\n\n{}'.format(str(ctx.message.author), str(ctx.message.server), msg)
+
+        # GMail
+        FROM_EMAIL = os.environ.get('FROM_EMAIL', None)
+        FROM_PSWD = os.environ.get('FROM_PSWD', None)
+        TO_EMAIL = os.environ.get('TO_EMAIL', None)
+
+        s = smtplib.SMTP('smtp.gmail.com', 587)
+        s.starttls()
+        s.login(FROM_EMAIL, FROM_PSWD)
+        s.sendmail(FROM_EMAIL, TO_EMAIL, emailContent)
+        s.quit()
+        
+        await self.bot.say('Request sent!')
     
     @commands.command(pass_context=False)
     async def version(self):
