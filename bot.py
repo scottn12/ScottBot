@@ -7,7 +7,7 @@ from boto3.session import Session
 import json
 
 PREFIX = '!'
-VERSION = '2.3.3'
+VERSION = '2.4'
 extensions = ['admin', 'flake', 'misc']
 
 # S3 Setup
@@ -36,9 +36,7 @@ async def on_ready():
 # Stream Ping
 @bot.event 
 async def on_member_update(before, after):
-    # Begin streaming
     if (before.game == None or before.game.type != 1) and (after.game != None and after.game.type == 1): # Before = Not Streaming, After = Streaming
-
         # Check if before was league. This is due to the league client and league 
         # game being considered different games and causing the one of them to override
         # the streaming status. This would cause the bot to ping each time the user
@@ -47,36 +45,32 @@ async def on_member_update(before, after):
             print('IT HAPPENED')
             #return
 
-        serverID = before.server.id
-
         # Load JSON
         with open('data/serverData.json','r') as f: 
             data = json.load(f)
 
-        
-        for server in data['servers']:
-            if serverID == server['serverID']: # Check for current server
+        # Try to find channelID, if none return (stream ping not enabled)
+        try:
+            server = data[before.server.id]
+            channelID = server['streamChannelID']
+        except:
+            return
 
-                # Try to find channelID, if none return (stream ping not enabled)
-                try:
-                    channelID = server['streamChannelID'] 
-                except:
-                    return
-                if channelID == None: 
-                    return
-                
-                roleID = server['streamRoleID'] # Get roleID if one is set
+        if channelID == None:
+            return
 
-                if roleID != None:
-                    role =  discord.utils.get(before.server.roles, id=roleID)
-                    if role not in before.roles: # If the streamer is not in the stream role then don't ping
-                        return
-                    roleMention = role.mention + ', '
-                else:
-                    roleMention = ''
+        roleID = server['streamRoleID']  # Get roleID if one is set
 
-                msgStr = roleMention + after.mention + ' has just gone live at ' + after.game.url + ' !'
-                await bot.send_message(discord.Object(id=channelID), msgStr)
+        if roleID != None:
+            role = discord.utils.get(before.server.roles, id=roleID)
+            if role not in before.roles:  # If the streamer is not in the stream role then don't ping
+                return
+            roleMention = role.mention + ', '
+        else:
+            roleMention = ''
+
+            msgStr = roleMention + after.mention + ' has just gone live at ' + after.game.url + ' !'
+            await bot.send_message(discord.Object(id=channelID), msgStr)
 
 if __name__ == '__main__':
     for extension in extensions:

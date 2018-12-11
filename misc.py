@@ -35,19 +35,17 @@ class Misc:
         allowedRoles = []
         serverID = ctx.message.server.id
         
+        # Get allowed roles (JSON)
         with open('data/serverData.json','r') as f:
             data = json.load(f)
         
-        noRoles = True
-        for server in data['servers']:
-            if serverID == server['serverID']: # Look for current server
-                try:
-                    allowedRoles = server['allowedRoles']
-                    noRoles = False
-                except:
-                    await self.bot.say('No roles have been enabled to be used with !role. Use !allowRole to enable roles.')
-                    return
-        if noRoles:
+        try: # Check if server is registered yet or existing role data exists
+            server = data[serverID]
+            allowedRoles = server['allowedRoles']
+            if not allowedRoles:
+                await self.bot.say('No roles have been enabled to be used with !role. Use !allowRole to enable roles.')
+                return
+        except: # No server/role data registered yet
             await self.bot.say('No roles have been enabled to be used with !role. Use !allowRole to enable roles.')
             return
 
@@ -155,27 +153,17 @@ class Misc:
             await self.bot.say('Error! You cannot mention someone in a quote.')
             return
 
+        # Update JSON
         with open('data/serverData.json','r') as f:
             data = json.load(f)
 
         serverID = ctx.message.server.id
-        newData = {
-            "serverID": serverID,
-            "quotes": [quote]
-        }
-        
-        newServer = True
-        for server in data['servers']: 
-            if serverID == server['serverID']: # Check if server is already registered and update if true
-                try:
-                    server['quotes'].append(quote)
-                except: # Server registered, but no role data
-                    server.update(newData)
-                    newServer = False
-                newServer = False
 
-        if newServer: # Add new Data
-            data['servers'].append(newData)
+        try: # Check if server is registered yet or existing quotes exists
+            server = data[serverID]
+            server['quotes'].append(quote)
+        except: # Add new data to JSON
+            data[serverID]['quotes'] = [quote]
 
         with open('data/serverData.json', 'w') as f: # Update JSON
             json.dump(data, f, indent=2)
@@ -188,21 +176,16 @@ class Misc:
     async def quote(self, ctx, arg='1'):
         '''ScottBot says a random quote.'''
 
-        with open('data/serverData.json','r') as f:
+        with open('data/serverData.json', 'r') as f:
             data = json.load(f)
         
-        serverID = ctx.message.server.id
-
-        noQuotes = True
-        for server in data['servers']:
-            if serverID == server['serverID']: # Look for current server
-                try:
-                    quotes = server['quotes']
-                    noQuotes = False
-                except: # Redundant code?
-                    await self.bot.say('Error! No quotes have been added! Use !addQuote to add quotes.')
-                    return
-        if noQuotes:
+        try:
+            server = data[ctx.message.server.id]
+            quotes = server['quotes']
+            if not quotes:
+                await self.bot.say('Error! No quotes have been added! Use !addQuote to add quotes.')
+                return
+        except:  
             await self.bot.say('Error! No quotes have been added! Use !addQuote to add quotes.')
             return
 

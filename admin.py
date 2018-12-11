@@ -53,40 +53,28 @@ class Admin:
             if not found:
                 await self.bot.say('Error! Role: "' + role + '" not found!')
         
+        # UPDATE JSON
         with open('data/serverData.json','r') as f:
             data = json.load(f)
-        
-        serverID = ctx.message.server.id
-        newData = {
-            "serverID": serverID,
-            "allowedRoles": roleIDS
-        }
-        
-        newServer = True
-        for server in data['servers']: 
-            if serverID == server['serverID']: # Check if server is already registered and update if true
-                try:
-                    rolesJSON = server['allowedRoles']
-                    for role in roleIDS:
-                        if role in rolesJSON:
-                            await self.bot.say(discord.utils.get(ctx.message.server.roles, id=role).name + ' has been disabled.')
-                            rolesJSON.remove(role)
-                        else:
-                            await self.bot.say(discord.utils.get(ctx.message.server.roles, id=role).name + ' has been enabled.')
-                            rolesJSON.append(role)
-                except: # Server registered, but no role data
-                    await self.bot.say('All mentioned roles enabled.')
-                    server.update(newData)
-                    newServer = False
-                newServer = False
 
-        if newServer: # Add new Data
+        serverID = ctx.message.server.id
+
+        try: # Check if server is registered yet or existing role data exists
+            server = data[serverID]
+            rolesJSON = server['allowedRoles']
+            for role in roleIDS:
+                if role in rolesJSON:
+                    rolesJSON.remove(role)
+                    await self.bot.say(discord.utils.get(ctx.message.server.roles, id=role).name + ' has been disabled.')
+                else:
+                    rolesJSON.append(role)
+                    await self.bot.say(discord.utils.get(ctx.message.server.roles, id=role).name + ' has been enabled.')
+        except: # Add new data to JSON
+            data[serverID]['allowedRoles'] = roleIDS
             await self.bot.say('All mentioned roles enabled.')
-            data['servers'].append(newData)
 
         with open('data/serverData.json', 'w') as f: # Update JSON
             json.dump(data, f, indent=2)
-        
         s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
 
     @commands.command(pass_context=True)
@@ -115,32 +103,20 @@ class Admin:
         serverID = ctx.message.server.id
         channelID = ctx.message.channel.id
 
-        newData = {
-            "serverID": serverID,
-            "streamChannelID": channelID,
-            "streamRoleID": roleID,
-        }
-        
-        newServer = True
-        for server in data['servers']: 
-            if serverID == server['serverID']: # Check if server is already registered and update if true
-                try: # Server has existing stream data
-                    if server['streamChannelID'] == channelID and server['streamRoleID'] == roleID: # Same info -> disable stream ping
-                        server['streamChannelID'] = None
-                        server['streamRoleID'] = None
-                        await self.bot.say('StreamPing disabled!')
-                    else:
-                        server['streamChannelID'] = channelID
-                        server['streamRoleID'] = roleID
-                        await self.bot.say('StreamPing enabled!')
-                    newServer = False
-                except: # Server has no existing stream data
-                    await self.bot.say('StreamPing enabled!')
-                    server.update(newData)
-                    newServer = False
-
-        if newServer: # Add new Data
-            data['servers'].append(newData)
+        try: # Check if server is registered yet or existing stream data exists
+            server = data[serverID]
+            if server['streamChannelID'] == channelID and server['streamRoleID'] == roleID: # Same info -> disable stream ping
+                server['streamChannelID'] = None
+                server['streamRoleID'] = None
+                await self.bot.say('StreamPing disabled!')
+            else:
+                data[serverID]['streamChannelID'] = channelID
+                data[serverID]['streamRoleID'] = roleID
+                await self.bot.say('StreamPing enabled!')
+        except: # Add new data to JSON
+            data[serverID]["streamChannelID"] = channelID
+            data[serverID]["streamRoleID"] = roleID
+            await self.bot.say('StreamPing enabled.')
 
         with open('data/serverData.json', 'w') as f: # Update JSON
             json.dump(data, f, indent=2)
@@ -205,14 +181,10 @@ class Admin:
 
         serverID = ctx.message.server.id
         
-        newServer = True
-        for server in data['servers']:
-            if serverID == server['serverID']: # Look for server
-                data['servers'].remove(server)
-                await self.bot.say('Server successfully data reset!')
-                newServer = False
-
-        if newServer: # Add new Data
+        try: # Check if server is registered
+            del data[serverID]
+            await self.bot.say('Server successfully data reset!')
+        except: # Server has no data
             await self.bot.say('No server data found!')
             return
 
