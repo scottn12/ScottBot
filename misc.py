@@ -7,6 +7,7 @@ from boto3.session import Session
 import json
 import smtplib 
 import os
+import random
 
 class Misc:
     '''Miscellaneous commands anyone can use.'''
@@ -39,13 +40,9 @@ class Misc:
         with open('data/serverData.json','r') as f:
             data = json.load(f)
         
-        try: # Check if server is registered yet or existing role data exists
-            server = data[serverID]
-            allowedRoles = server['allowedRoles']
-            if not allowedRoles:
-                await self.bot.say('No roles have been enabled to be used with !role. Use !allowRole to enable roles.')
-                return
-        except: # No server/role data registered yet
+        if serverID in data and 'allowedRoles' in data[serverID] and data[serverID]['allowedRoles']: # Check if server is registered / role data exists / role data not empty
+            allowedRoles = data[serverID]['allowedRoles']
+        else: # No server/role data registered yet
             await self.bot.say('No roles have been enabled to be used with !role. Use !allowRole to enable roles.')
             return
 
@@ -159,11 +156,15 @@ class Misc:
 
         serverID = ctx.message.server.id
 
-        try: # Check if server is registered yet or existing quotes exists
-            server = data[serverID]
-            server['quotes'].append(quote)
-        except: # Add new data to JSON
-            data[serverID]['quotes'] = [quote]
+        if serverID in data: # Check if server is registered yet 
+            if 'quotes' in data[serverID]: # Check if quotes are registered yet
+                data[serverID]['quotes'].append(quote)
+            else: # add quote field
+                data[serverID]['quotes'] = [quote]
+        else: # new server
+            data[serverID] = {
+                "quotes" : [quote]
+            } 
 
         with open('data/serverData.json', 'w') as f: # Update JSON
             json.dump(data, f, indent=2)
@@ -179,13 +180,10 @@ class Misc:
         with open('data/serverData.json', 'r') as f:
             data = json.load(f)
         
-        try:
-            server = data[ctx.message.server.id]
-            quotes = server['quotes']
-            if not quotes:
-                await self.bot.say('Error! No quotes have been added! Use !addQuote to add quotes.')
-                return
-        except:  
+        serverID = ctx.message.server.id
+        if serverID in data and 'quotes' in data[serverID] and data[serverID]['quotes']: # Check if server/quotes are registered
+            quotes = data[serverID]['quotes']
+        else:  
             await self.bot.say('Error! No quotes have been added! Use !addQuote to add quotes.')
             return
 
@@ -199,7 +197,6 @@ class Misc:
             await self.bot.say('**Up to 5 quotes are allowed at once.**')
             arg = 5
 
-        import random
         for _ in range(arg):
             rng = random.randint(0, len(quotes)-1)
             await self.bot.say(quotes[rng])

@@ -59,18 +59,23 @@ class Admin:
 
         serverID = ctx.message.server.id
 
-        try: # Check if server is registered yet or existing role data exists
-            server = data[serverID]
-            rolesJSON = server['allowedRoles']
-            for role in roleIDS:
-                if role in rolesJSON:
-                    rolesJSON.remove(role)
-                    await self.bot.say(discord.utils.get(ctx.message.server.roles, id=role).name + ' has been disabled.')
-                else:
-                    rolesJSON.append(role)
-                    await self.bot.say(discord.utils.get(ctx.message.server.roles, id=role).name + ' has been enabled.')
-        except: # Add new data to JSON
-            data[serverID]['allowedRoles'] = roleIDS
+        if serverID in data: # Check if server is registered yet 
+            if 'allowedRoles' in data[serverID]: # Check if roles are registered yet
+                rolesJSON = data[serverID]['allowedRoles']
+                for role in roleIDS:
+                    if role in rolesJSON:
+                        rolesJSON.remove(role)
+                        await self.bot.say(discord.utils.get(ctx.message.server.roles, id=role).name + ' has been disabled.')
+                    else:
+                        rolesJSON.append(role)
+                        await self.bot.say(discord.utils.get(ctx.message.server.roles, id=role).name + ' has been enabled.')
+            else: # add role field
+                data[serverID]['allowedRoles'] = roleIDS
+                await self.bot.say('All mentioned roles enabled.')
+        else: # new server
+            data[serverID] = {
+                "allowedRoles" : roleIDS
+            }
             await self.bot.say('All mentioned roles enabled.')
 
         with open('data/serverData.json', 'w') as f: # Update JSON
@@ -103,20 +108,26 @@ class Admin:
         serverID = ctx.message.server.id
         channelID = ctx.message.channel.id
 
-        try: # Check if server is registered yet or existing stream data exists
-            server = data[serverID]
-            if server['streamChannelID'] == channelID and server['streamRoleID'] == roleID: # Same info -> disable stream ping
-                server['streamChannelID'] = None
-                server['streamRoleID'] = None
-                await self.bot.say('StreamPing disabled!')
+        if serverID in data: # Check if server is registered yet 
+            if 'streamChannelID' in data[serverID]: # Check if stream is registered yet
+                if data[serverID]['streamChannelID'] == channelID and data[serverID]['streamRoleID'] == roleID: # Same info -> disable stream ping
+                    data[serverID]['streamChannelID'] = None
+                    data[serverID]['streamRoleID'] = None
+                    await self.bot.say('StreamPing disabled!')
+                else: # Enable
+                    data[serverID]['streamChannelID'] = channelID
+                    data[serverID]['streamRoleID'] = roleID
+                    await self.bot.say('StreamPing enabled!')
             else:
                 data[serverID]['streamChannelID'] = channelID
                 data[serverID]['streamRoleID'] = roleID
                 await self.bot.say('StreamPing enabled!')
-        except: # Add new data to JSON
-            data[serverID]["streamChannelID"] = channelID
-            data[serverID]["streamRoleID"] = roleID
-            await self.bot.say('StreamPing enabled.')
+        else: # Register server w/ new data
+            data[serverID] = {
+                "streamChannelID" : channelID,
+                "streamRoleID" : roleID
+            }
+            await self.bot.say('StreamPing enabled!')
 
         with open('data/serverData.json', 'w') as f: # Update JSON
             json.dump(data, f, indent=2)
@@ -181,10 +192,10 @@ class Admin:
 
         serverID = ctx.message.server.id
         
-        try: # Check if server is registered
+        if serverID in data: # Check if registered
             del data[serverID]
             await self.bot.say('Server successfully data reset!')
-        except: # Server has no data
+        else: # Server has no data
             await self.bot.say('No server data found!')
             return
 

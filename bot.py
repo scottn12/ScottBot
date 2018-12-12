@@ -7,7 +7,7 @@ from boto3.session import Session
 import json
 
 PREFIX = '!'
-VERSION = '2.4'
+VERSION = '2.4.1'
 extensions = ['admin', 'flake', 'misc']
 
 # S3 Setup
@@ -55,7 +55,6 @@ async def on_member_update(before, after):
             channelID = server['streamChannelID']
         except:
             return
-
         if channelID == None:
             return
 
