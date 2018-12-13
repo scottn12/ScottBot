@@ -6,7 +6,7 @@ https://discordapp.com/oauth2/authorize?client_id=465969556633026604&scope=bot
 
 Please note many commands require administrative permissions.
 
-**ScottBot Version: 2.2.3**
+**ScottBot Version: 2.4.2**
 
 Commands:
 
@@ -29,6 +29,8 @@ Commands:
   * flakeReset - Resets the flakeRank.
   
   * !resetData - Permanently resets all ScottBot related data for the server.
+
+  * !request - Sends a request for a feature you would like added to ScottBot.
 
   * !addQuote - Adds a quote to the list of quotes.
   

@@ -7,7 +7,7 @@ from boto3.session import Session
 import json
 
 PREFIX = '!'
-VERSION = '2.4.1'
+VERSION = '2.4.2'
 extensions = ['admin', 'flake', 'misc']
 
 # S3 Setup
@@ -49,27 +49,25 @@ async def on_member_update(before, after):
         with open('data/serverData.json','r') as f: 
             data = json.load(f)
 
-        # Try to find channelID, if none return (stream ping not enabled)
-        try:
-            server = data[before.server.id]
-            channelID = server['streamChannelID']
-        except:
-            return
-        if channelID == None:
-            return
+        serverID = before.server.id
 
-        roleID = server['streamRoleID']  # Get roleID if one is set
+        if serverID in data and 'streamChannelID' in data[serverID] and data[serverID]['streamChannelID']: # Check if server/channelID is registered
+            channelID = data[serverID]['streamChannelID']
+        else:
+            return # don't ping if not enabled
+
+        roleID = data[serverID]['streamRoleID']  # Get roleID if one is set
 
         if roleID != None:
             role = discord.utils.get(before.server.roles, id=roleID)
             if role not in before.roles:  # If the streamer is not in the stream role then don't ping
-                return
+                return 
             roleMention = role.mention + ', '
         else:
             roleMention = ''
 
-            msgStr = roleMention + after.mention + ' has just gone live at ' + after.game.url + ' !'
-            await bot.send_message(discord.Object(id=channelID), msgStr)
+        msgStr = roleMention + after.mention + ' has just gone live at ' + after.game.url + ' !'
+        await bot.send_message(discord.Object(id=channelID), msgStr)
 
 if __name__ == '__main__':
     for extension in extensions:
