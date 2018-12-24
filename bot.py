@@ -7,10 +7,9 @@ from boto3.session import Session
 import json
 
 PREFIX = '!'
-VERSION = '2.4.2'
-extensions = ['admin', 'flake', 'misc']
+VERSION = '2.4.3'
 
-# S3 Setup
+# S3 Globals
 ACCESS_KEY_ID = os.environ.get('ACCESS_KEY_ID', None)
 ACCESS_SECRET_KEY = os.environ.get('ACCESS_SECRET_KEY', None)
 BUCKET_NAME = os.environ.get('BUCKET_NAME', None)
@@ -33,9 +32,9 @@ async def on_ready():
     await bot.change_presence(game=discord.Game(name='Overcooked'))
     print(bot.user.name + ' Version: ' + VERSION + " is ready!")
 
-# Stream Ping
+
 @bot.event 
-async def on_member_update(before, after):
+async def on_member_update(before, after): # Stream Ping
     if (before.game == None or before.game.type != 1) and (after.game != None and after.game.type == 1): # Before = Not Streaming, After = Streaming
         # Check if before was league. This is due to the league client and league 
         # game being considered different games and causing the one of them to override
@@ -66,11 +65,12 @@ async def on_member_update(before, after):
         else:
             roleMention = ''
 
-        msgStr = roleMention + after.mention + ' has just gone live at ' + after.game.url + ' !'
+        msgStr = roleMention + after.nick + ' has just gone live at ' + after.game.url + ' !'
         await bot.send_message(discord.Object(id=channelID), msgStr)
 
 if __name__ == '__main__':
-    for extension in extensions:
+    for extension in ['admin', 'flake', 'misc']:
         print('Loading ' + extension + '...')
         bot.load_extension(extension)
     bot.run(os.environ.get('BOT_TOKEN', None))
+    

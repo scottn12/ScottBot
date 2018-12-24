@@ -136,24 +136,25 @@ class Admin:
     @commands.command(pass_context=True)
     async def clear(self, ctx):
         '''Deletes all commands and messages from ScottBot.'''
+
         if (not await self.isAdmin(ctx)):
             await self.bot.say('Only admins may use !clear.')
             return
-        messages = []
+
         async for message in self.bot.logs_from(ctx.message.channel):
             if (message.author == self.bot.user or message.content[0] == '!'):
-                messages.append(message)
-        try:
-            if len(messages) > 1:
-                await self.bot.delete_messages(messages)
-        except:
-            # For messages older than 14 days
-            async for message in self.bot.logs_from(ctx.message.channel):
-                await self.bot.delete_message(message)
+                # Delete
+                async for message in self.bot.logs_from(ctx.message.channel):
+                    try:
+                        await self.bot.delete_message(message)
+                    except:
+                        await self.bot.say('Error! Permission denied.')
+                        return
 
     @commands.command(pass_context=True)
-    async def clearAll(self, ctx):
+    async def clearAlls(self, ctx):
         '''Clears all messages in the text channel.'''
+        
         if (not await self.isAdmin(ctx)):
             await self.bot.say('Only admins may use !clear.')
             return
@@ -164,16 +165,12 @@ class Admin:
             return
 
         # Delete
-        messages = []
         async for message in self.bot.logs_from(ctx.message.channel):
-            messages.append(message)
-        try:
-            if len(messages) > 1:
-                await self.bot.delete_messages(messages)
-        except:
-            # For messages older than 14 days
-            async for message in self.bot.logs_from(ctx.message.channel):
+            try:
                 await self.bot.delete_message(message)
+            except:
+                await self.bot.say('Error! Permission denied.')
+                return
 
     @commands.command(pass_context=True)
     async def resetData(self, ctx):
