@@ -5,9 +5,10 @@ from discord.ext import commands
 import os
 from boto3.session import Session
 import json
+import time
 
 PREFIX = '!'
-VERSION = '2.4.3'
+VERSION = '2.4.4'
 
 # S3 Globals
 ACCESS_KEY_ID = os.environ.get('ACCESS_KEY_ID', None)
@@ -22,12 +23,15 @@ bot = commands.Bot(command_prefix = PREFIX, description = 'ScottBot Version: ' +
 @bot.event
 async def on_ready():
     # Load Files
-    print('Loading JSON...')
+    print('Loading Server Data...')
     s3.download_file(BUCKET_NAME, 'serverData.json', 'data/serverData.json')
+    print('Loading Streams...')
+    s3.download_file(BUCKET_NAME, 'streams.json', 'data/streams.json')
     print('Loading DB...')
     s3.download_file(BUCKET_NAME, 'bot_database.db', 'data/bot_database.db')
     print('Loading Requests...')
     s3.download_file(BUCKET_NAME, 'requests.txt', 'data/requests.txt')
+    
 
     await bot.change_presence(game=discord.Game(name='Overcooked'))
     print(bot.user.name + ' Version: ' + VERSION + " is ready!")
@@ -36,20 +40,28 @@ async def on_ready():
 @bot.event 
 async def on_member_update(before, after): # Stream Ping
     if (before.game == None or before.game.type != 1) and (after.game != None and after.game.type == 1): # Before = Not Streaming, After = Streaming
-        # Check if before was league. This is due to the league client and league 
-        # game being considered different games and causing the one of them to override
-        # the streaming status. This would cause the bot to ping each time the user
-        # switched between the client and game.
-        if (before.game != None and before.game.name == 'League of Legends'): # Before = League
-            print('IT HAPPENED')
-            #return
+        userID = before.id
 
-        # Load JSON
-        with open('data/serverData.json','r') as f: 
+        # Load Current Streamers JSON
+        with open('data/streams.json','r') as f: 
             data = json.load(f)
+
+        # Check Cooldown
+        if userID in data:
+            cooldownTime = data[userID]
+        else:
+            cooldownTime = -1 # First time streaming - no cooldown
+        data[userID] = time.time() + 7200 # Update cooldown time (7200 seconds = 2 hours)
+        with open('data/streams.json', 'w') as f: # Update Streams JSON
+            json.dump(data, f, indent=2)
+        s3.upload_file('data/streams.json', BUCKET_NAME, 'streams.json')
+        if time.time() < cooldownTime: # Cooldown not expired - don't ping
+            return
 
         serverID = before.server.id
 
+        with open('data/serverData.json','r') as f: # Load server data JSON
+            data = json.load(f)
         if serverID in data and 'streamChannelID' in data[serverID] and data[serverID]['streamChannelID']: # Check if server/channelID is registered
             channelID = data[serverID]['streamChannelID']
         else:
@@ -65,7 +77,7 @@ async def on_member_update(before, after): # Stream Ping
         else:
             roleMention = ''
 
-        msgStr = roleMention + after.nick + ' has just gone live at ' + after.game.url + ' !'
+        msgStr = roleMention + after.mention + ' has just gone live at ' + after.game.url + ' !'
         await bot.send_message(discord.Object(id=channelID), msgStr)
 
 if __name__ == '__main__':
@@ -73,4 +85,3 @@ if __name__ == '__main__':
         print('Loading ' + extension + '...')
         bot.load_extension(extension)
     bot.run(os.environ.get('BOT_TOKEN', None))
-    
