@@ -14,7 +14,6 @@ class Misc:
     def __init__(self, bot):
         self.bot = bot
         self.bot.remove_command('help')
-        #self.bot.remove_command('clear') # remove?
  
     @commands.command(pass_context=True)
     async def help(self, ctx, *args: str):
