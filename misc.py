@@ -205,20 +205,18 @@ class Misc:
         # Check for valid input and parse
         try:
             msg = ctx.message.content[6:]
-            msg = msg.split('" "') #Split questions and choices
-            msg[0] = msg[0].replace('"','') #Remove remaning quotations
-            msg[-1] = msg[-1].replace('"','')
+            msg = msg.split('|') #Split questions and choices
             question = msg[0]
             choices = msg[1:]
         except:
-            await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): !poll "Question" "Choice" "Choice"')
+            await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): !poll Question | Choice | Choice')
             return
         #Check if number of choices is valid
         if (len(choices) < 2):
-            await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): !poll "Question" "Choice" "Choice"')
+            await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): !poll Question | Choice | Choice')
             return
         if (len(choices) > 9):
-            await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): !poll "Question" "Choice" "Choice"')
+            await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): !poll Question | Choice | Choice')
             return
         #Print and React
         author = ctx.message.author

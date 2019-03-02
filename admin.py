@@ -8,7 +8,7 @@ class Admin:
     '''Commands for server administrators only.'''
     def __init__(self, bot):
         self.bot = bot
-    
+
     @commands.command(pass_context=True)
     async def allowRole(self, ctx): 
         '''Enables/Disables role(s) to be used with !role.'''
@@ -200,21 +200,21 @@ class Admin:
             json.dump(data, f, indent=2)
         s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
 
-    #@commands.command(pass_context=True)
-    #async def changePrefix(self, ctx): #NOT FINISHED
-    #    '''Changes the prefix for ScottBot commands.'''
-    #    if (not await self.isAdmin(ctx)):
-    #        await self.bot.say('Only admins may use !changePrefix.')
-    #        return
-    #
-    #    import string
-    #    newPrefix = ctx.message.content[14:]
-    #    if (newPrefix in string.punctuation):
-    #        #await self.bot.say('Prefix successfully changed!')
-    #        x = 2 #nothing
-    #    else:
-    #        await self.bot.say('Invalid prefix. New prefix must be a single punctuation character.')
-    #        return
+    """@commands.command(pass_context=True)
+    async def changePrefix(self, ctx): #NOT FINISHED
+        '''Changes the prefix for ScottBot commands.'''
+        if (not await self.isAdmin(ctx)):
+            await self.bot.say('Only admins may use !changePrefix.')
+            return
+    
+        import string
+        newPrefix = ctx.message.content[14:]
+        if (newPrefix in string.punctuation):
+            #await self.bot.say('Prefix successfully changed!')
+            x = 2 #nothing
+        else:
+            await self.bot.say('Invalid prefix. New prefix must be a single punctuation character.')
+            return"""
 
     @commands.command(pass_context=True)
     async def flakeReset(self, ctx):

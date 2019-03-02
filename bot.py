@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import time
 
 PREFIX = '!'
-VERSION = '2.4.5'
+VERSION = '2.4.6'
 
 # S3 Globals
 ACCESS_KEY_ID = os.environ.get('ACCESS_KEY_ID', None)
