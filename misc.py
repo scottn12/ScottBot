@@ -8,6 +8,7 @@ import json
 import smtplib 
 import os
 import random
+import string
 
 class Misc:
     '''Miscellaneous commands anyone can use.'''
@@ -205,7 +206,7 @@ class Misc:
         # Check for valid input and parse
         try:
             msg = ctx.message.content[6:]
-            msg = msg.split('|') #Split questions and choices
+            msg = msg.split('|') #Split questions and choices\
             question = msg[0]
             choices = msg[1:]
         except:
@@ -218,16 +219,19 @@ class Misc:
         if (len(choices) > 9):
             await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): !poll Question | Choice | Choice')
             return
-        #Print and React
-        author = ctx.message.author
-        poll = await self.bot.say(pollPrint(question, choices, author))
-        emoji = ['1⃣', '2⃣', '3⃣', '4⃣', '5⃣', '6⃣', '7⃣', '8⃣', '9⃣'] # unicode for emoji's 1-9
-        for i in range(len(choices)):
-            await self.bot.add_reaction(poll, emoji[i])
+
+        # Try to delete original message
         try:
             await self.bot.delete_message(ctx.message)
         except:
-            print('need admin D:')  
+            print('need admin D:')
+
+        #Print and React
+        author = ctx.message.author
+        poll = await self.bot.say(pollPrint(question, choices, author))
+        emoji = ['1⃣', '2⃣', '3⃣', '4⃣', '5⃣', '6⃣', '7⃣', '8⃣', '9⃣'] # unicode for emoji's 1-9 
+        for i in range(len(choices)):
+            await self.bot.add_reaction(poll, emoji[i])
 
 # Helper function to print message for !poll
 def pollPrint(question: str, choices: list, author: discord.User):
@@ -235,7 +239,7 @@ def pollPrint(question: str, choices: list, author: discord.User):
     rtn = 'Poll by ' + author.mention + ':\n'
     rtn += question + '\n'
     for i in range(len(choices)):
-        rtn += emoji[i] + ' ' + choices[i] + '\n'
+        rtn += emoji[i] + ' ' + choices[i].lstrip(' ') + '\n' # strip to remove extra spaces at front/back
     return rtn    
 
 def setup(bot):
