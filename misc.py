@@ -138,6 +138,69 @@ class Misc:
         await self.bot.say(msg)
 
 
+    @commands.command(pass_context=True)
+    async def addQuote(self, ctx):
+        '''Adds a quote to the list of quotes.'''
+        quote = ctx.message.content[10:]
+        if len(quote) == 0:
+            await self.bot.say('Error! No quote was provided.')
+            return
+
+        mentions = ctx.message.mentions
+        if mentions:
+            await self.bot.say('Error! You cannot mention someone in a quote.')
+            return
+
+        # Update JSON
+        with open('data/serverData.json', 'r') as f:
+            data = json.load(f)
+
+        serverID = ctx.message.server.id
+
+        if serverID in data:  # Check if server is registered yet
+            if 'quotes' in data[serverID]:  # Check if quotes are registered yet
+                data[serverID]['quotes'].append(quote)
+            else:  # add quote field
+                data[serverID]['quotes'] = [quote]
+        else:  # new server
+            data[serverID] = {
+                "quotes": [quote]
+            }
+
+        with open('data/serverData.json', 'w') as f:  # Update JSON
+            json.dump(data, f, indent=2)
+
+        s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
+
+        await self.bot.say('Quote added!')
+
+    @commands.command(pass_context=True)
+    async def quote(self, ctx, arg='1'):
+        '''ScottBot says a random quote.'''
+        MAX_QUOTES = 5
+        with open('data/serverData.json', 'r') as f:
+            data = json.load(f)
+
+        serverID = ctx.message.server.id
+        if serverID in data and 'quotes' in data[serverID] and data[serverID][
+            'quotes']:  # Check if server/quotes are registered
+            quotes = data[serverID]['quotes']
+        else:
+            await self.bot.say('Error! No quotes have been added! Use !addQuote to add quotes.')
+            return
+
+        # Check if int was passed & num of quotes is not greater than max allowed
+        try:
+            arg = int(arg)
+        except:
+            arg = 1
+        if arg > MAX_QUOTES:
+            await self.bot.say('**Up to ' + str(MAX_QUOTES) + ' quotes are allowed at once.**')
+            arg = MAX_QUOTES
+
+        for _ in range(arg):
+            rng = random.randint(0, len(quotes) - 1)
+            await self.bot.say(quotes[rng])
 
     @commands.command(pass_context=True)
     async def poll(self, ctx):
