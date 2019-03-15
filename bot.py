@@ -1,15 +1,14 @@
-#ScottBot by github.com/scottn12
+# ScottBot by github.com/scottn12
 
 import discord
 from discord.ext import commands
 import os
 from boto3.session import Session
 import json
-from datetime import datetime, timedelta
 import time
 
 PREFIX = '!'
-VERSION = '2.4.6'
+VERSION = '2.4.7'
 
 # S3 Globals
 ACCESS_KEY_ID = os.environ.get('ACCESS_KEY_ID', None)
@@ -20,6 +19,7 @@ session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key=ACCESS_
 s3 = session.client('s3')
 
 bot = commands.Bot(command_prefix = PREFIX, description = 'ScottBot Version: ' + VERSION)
+
 
 @bot.event
 async def on_ready():
@@ -36,7 +36,8 @@ async def on_ready():
     await bot.change_presence(game=discord.Game(name='Overcooked'))
     print(bot.user.name + ' Version: ' + VERSION + " is ready!")
 
-@bot.event 
+
+@bot.event
 async def on_member_update(before, after): # Stream Ping
     if (before.game == None or before.game.type != 1) and (after.game != None and after.game.type == 1): # Before = Not Streaming, After = Streaming
         serverID = before.server.id
@@ -58,16 +59,16 @@ async def on_member_update(before, after): # Stream Ping
             roleMention = ''
 
         # Load Current Streamers JSON
-        with open('data/streams.json','r') as f: 
+        with open('data/streams.json','r') as f:
             data = json.load(f)
         # Check Cooldown
         userID = before.id
         if userID in data:
             cooldownTime = data[userID]
         else:
-            cooldownTime = -1 # First time streaming - no cooldown
+            cooldownTime = -1  # First time streaming - no cooldown
         curr = time.time()
-        if curr > cooldownTime: # Cooldown expired - ping
+        if curr > cooldownTime:  # Cooldown expired - ping
             msgStr = roleMention + after.mention + ' has just gone live at ' + after.game.url + ' !'
             await bot.send_message(discord.Object(id=channelID), msgStr)
             print('PING')
@@ -79,7 +80,7 @@ async def on_member_update(before, after): # Stream Ping
         # Update cooldown time (7200 seconds = 2 hours)
         time.sleep(1)
         data[userID] = time.time() + 7200
-        with open('data/streams.json', 'w') as f: # Update Streams JSON
+        with open('data/streams.json', 'w') as f:  # Update Streams JSON
             json.dump(data, f, indent=2)
         s3.upload_file('data/streams.json', BUCKET_NAME, 'streams.json')
         print('done!')
