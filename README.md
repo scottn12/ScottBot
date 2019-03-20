@@ -6,19 +6,17 @@ https://discordapp.com/oauth2/authorize?client_id=465969556633026604&scope=bot
 
 Please note many commands require administrative permissions.
 
-**ScottBot Version: 2.4.2**
+**ScottBot Version: 2.5**
 
 Commands:
 
   * !help - Shows all ScottBot commands and descriptions.
 
-  * !allowRole - Enables/Disables role(s) to be used with !role.
+  * !allowRoles - Enables/Disables role(s) to be used with !role.
   
-  * !role - Adds/Removes user to an allowed role.
+  * !roles - Adds/Removes user to an allowed role.
   
   * !allowStreamPing - Allows ScottBot to send an alert when someone starts streaming on twitch. Optinally it can alert a specific role.
-  
-  * !clearAll - Clears all messages in the text channel.
   
   * !clear - Deletes all commands sent and all messages from ScottBot in a text channel.
   
@@ -41,5 +39,3 @@ Commands:
   * !version - Displays ScottBot Version.
   
   * !hello ScottBot greets you.
-  
-  * !nanoDankster - A sad story.
