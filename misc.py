@@ -163,6 +163,15 @@ class Misc:
             await self.bot.say('No roles have been enabled to be used with !role. Use !allowRole to enable roles.')
             return
 
+        for id in allowedRoles:
+            role = get(ctx.message.server.roles, id=id)
+            if not role:  # Role has been removed since last use
+                allowedRoles.remove(id)
+                data[serverID]['allowedRoles'] = allowedRoles
+                with open('data/serverData.json', 'w') as f:
+                    json.dump(data, f, indent=2)
+                s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
+
         user = ctx.message.author
         user_roles = user.roles
         emoji = [':one:', ':two:', ':three:', ':four:', ':five:', ':six:', ':seven:', ':eight:', ':nine:']
