@@ -8,7 +8,7 @@ import json
 import time
 
 PREFIX = '!'
-VERSION = '2.5.1'
+VERSION = '2.5.2'
 
 # S3 Globals
 ACCESS_KEY_ID = os.environ.get('ACCESS_KEY_ID', None)

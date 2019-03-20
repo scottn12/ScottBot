@@ -180,7 +180,7 @@ class Misc:
         # Allowed roles can fit in one message
         TIMEOUT = 30
         if total_roles <= 9:
-            content = f'Choose the role(s) you would like to join/leave (Active for {TIMEOUT} seconds):\n'
+            content = f'Choose the role(s) {user.mention} would like to join/leave (Active for {TIMEOUT} seconds):\n'
             for i in range(total_roles):
                 role = get(ctx.message.server.roles, id=allowedRoles[i])
                 content += f'{emoji[i]} '
@@ -201,19 +201,19 @@ class Misc:
                 role = get(ctx.message.server.roles, id=allowedRoles[react.index(e)])
                 if role in user.roles:
                     await self.bot.remove_roles(user, role)
-                    await self.bot.say(f'You have left `{role}`!')
+                    await self.bot.say(f'{user} has left `{role}`!')
                     content = content.replace(f'Leave `{role}`', f'Join `{role}`')
                     await self.bot.edit_message(msg, new_content=content)
                 else:
                     await self.bot.add_roles(user, role)
-                    await self.bot.say(f'You have joined `{role}`!')
+                    await self.bot.say(f'{user} has joined `{role}`!')
                     content = content.replace(f'Join `{role}`', f'Leave `{role}`')
                     await self.bot.edit_message(msg, new_content=content)
             return
 
         # Over 9 Allowed Roles
         TIMEOUT = 90
-        content = f'Choose the role(s) you would like to join/leave (Active for {TIMEOUT} seconds):\n'
+        content = f'Choose the role(s) {user.mention} would like to join/leave (Active for {TIMEOUT} seconds):\n'
         for i in range(9):
             role = get(ctx.message.server.roles, id=allowedRoles[i])
             content += f'{emoji[i]} '
@@ -267,7 +267,7 @@ class Misc:
                     end = page*9 + total_roles % 9
                 else:
                     end = page*9 + 9
-                content = 'Choose the role(s) you would like to join/leave (Active for {TIMEOUT} seconds):\n'
+                content = f'Choose the role(s) {user.mention} would like to join/leave (Active for {TIMEOUT} seconds):\n'
                 for i in range(page*9, end):
                     role = get(ctx.message.server.roles, id=allowedRoles[i])
                     content += f'{emoji[count]} '
@@ -283,12 +283,12 @@ class Misc:
             role = get(ctx.message.server.roles, id=allowedRoles[react.index(e) + page*9])
             if role in user.roles:
                 await self.bot.remove_roles(user, role)
-                await self.bot.say(f'You have left `{role}`!')
+                await self.bot.say(f'{user} has left `{role}`!')
                 content = content.replace(f'Leave `{role}`', f'Join `{role}`')
                 await self.bot.edit_message(msg, new_content=content)
             else:
                 await self.bot.add_roles(user, role)
-                await self.bot.say(f'You have joined `{role}`!')
+                await self.bot.say(f'{user} has joined `{role}`!')
                 content = content.replace(f'Join `{role}`', f'Leave `{role}`')
                 await self.bot.edit_message(msg, new_content=content)
 
