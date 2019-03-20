@@ -1,14 +1,12 @@
 import discord
 from discord.ext import commands
-from discord.ext.commands import Bot
-import asyncio
-from bot import VERSION, ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME, s3
-from boto3.session import Session
+from discord.utils import get
+from bot import VERSION, BUCKET_NAME, s3
 import json
 import smtplib 
 import os
+import time
 import random
-import string
 
 class Misc:
     '''Miscellaneous commands anyone can use.'''
@@ -20,123 +18,6 @@ class Misc:
     async def help(self, ctx, *args: str):
         '''Shows this message.'''
         return await commands.bot._default_help_command(ctx, *args)
-
-    @commands.command(pass_context=True)
-    async def role(self, ctx):
-        '''Adds/Removes user to an allowed role.'''
-        if len(ctx.message.content) < 7:
-            await self.bot.say('No role(s) given! Use the following format: !role @role/"role"')
-            return
-        else:
-            roles = ctx.message.role_mentions # Get mentioned roles
-            roleStr = []
-            s = ctx.message.content[6:]
-            roleStr = s.split('"')
-
-        allowedRoles = []
-        serverID = ctx.message.server.id
-        
-        # Get allowed roles (JSON)
-        with open('data/serverData.json','r') as f:
-            data = json.load(f)
-        
-        if serverID in data and 'allowedRoles' in data[serverID] and data[serverID]['allowedRoles']: # Check if server is registered / role data exists / role data not empty
-            allowedRoles = data[serverID]['allowedRoles']
-        else: # No server/role data registered yet
-            await self.bot.say('No roles have been enabled to be used with !role. Use !allowRole to enable roles.')
-            return
-
-        user = ctx.message.author
-
-        for role in roles: # Evaluate mentioned roles
-            if role.id in allowedRoles:
-                if role in (user.roles):
-                    await self.bot.say('You have been removed from role "' + role.name + '"!')
-                    try:
-                        await self.bot.remove_roles(user, role)
-                    except:
-                        await self.bot.say('Error! Permission denied. Try checking ScottBot\'s permissions')
-                        return
-                else:
-                    await self.bot.say('You have been added to role "' + role.name + '"!')
-                    try:
-                        await self.bot.add_roles(user, role)
-                    except:
-                        await self.bot.say('Error! Permission denied. Try checking ScottBot\'s permissions')
-                        return
-            else: 
-                await self.bot.say('Error! Role: "' + role.name + '" is not enabled to be used with !role.')
-        
-        serverRoles = ctx.message.server.roles
-        
-        for role in roleStr: # Evaluate quoted roles
-            found = False
-            if role == '' or role == ' ' or role[0] == '<':
-                continue
-            for serverRole in serverRoles:
-                if (role == serverRole.name):
-                    found = True
-                    if (serverRole.id in allowedRoles):
-                        if (serverRole in user.roles):
-                            await self.bot.say('You have been removed from role: "' + serverRole.name + '"!')
-                            await self.bot.remove_roles(user, serverRole)
-                        else:
-                            await self.bot.say('You have been added to role: "' + serverRole.name + '"!')
-                            await self.bot.add_roles(user, serverRole)
-                    else:
-                        await self.bot.say('Error! Role: "' + serverRole.name + '" is not enabled to be used with !role.')
-            if not found:
-                await self.bot.say('Error! Role: "' + role + '" not found!')
-
-    @commands.command(pass_context=True)
-    async def request(self, ctx):
-        '''Request a feature you would like added to ScottBot.'''
-        msg = ctx.message.content[9:]
-        if len(msg) == 0:
-            await self.bot.say('Error! No request provided.')
-            return
-
-        # Append to file
-        req = '\"{}\" - {}\n'.format(msg, ctx.message.author.name)
-        with open('data/requests.txt', 'a') as f:
-            f.write(req)
-        s3.upload_file('data/requests.txt', BUCKET_NAME, 'requests.txt')
-
-        emailContent = 'Subject: New Feature Request for ScottBot\n\nUser: {}\nServer: {}\n\n{}'.format(str(ctx.message.author), str(ctx.message.server), msg)
-
-        # GMail
-        FROM_EMAIL = os.environ.get('FROM_EMAIL', None)
-        FROM_PSWD = os.environ.get('FROM_PSWD', None)
-        TO_EMAIL = os.environ.get('TO_EMAIL', None)
-
-        s = smtplib.SMTP('smtp.gmail.com', 587)
-        s.starttls()
-        s.login(FROM_EMAIL, FROM_PSWD)
-        s.sendmail(FROM_EMAIL, TO_EMAIL, emailContent)
-        s.quit()
-        
-        await self.bot.say('Request sent!')
-    
-    @commands.command(pass_context=False)
-    async def version(self):
-        '''Prints ScottBot Version.'''
-        await self.bot.say('ScottBot is running Version: ' + VERSION)
-
-    @commands.command(pass_context=True)
-    async def hello(self, ctx):
-        '''ScottBot greets you.'''
-        name = ctx.message.author.mention
-        await self.bot.say("Hello {}!".format(name))
-
-    @commands.command(pass_context=False)
-    async def nanoDankster(self):
-        '''A sad story.'''
-        scott = '<@170388931949494272>'
-        msg = 'On 7/28/18, ' + scott + ' accidentally erased his work on ScottBot. At approximately 5AM he restored his work and uploaded the new version to GitHub. '
-        msg += 'Unfortunately, ' + scott + ' is stupid and forgot to hide ScottBot\'s token in the source code. '
-        msg += 'This allowed mallicious bot NanoDankster to take control of the ScottBot, erasing everything from the server. Don\'t be like ' + scott + '.'
-        await self.bot.say(msg)
-
 
     @commands.command(pass_context=True)
     async def addQuote(self, ctx):
@@ -203,12 +84,252 @@ class Misc:
             await self.bot.say(quotes[rng])
 
     @commands.command(pass_context=True)
+    async def role(self, ctx):
+        '''Join/leave a role using !role @role/"role"'''
+        if len(ctx.message.content) < 7:
+            await self.bot.say('No role(s) given! Use the following format: !role @role/"role"')
+            return
+        else:
+            roles = ctx.message.role_mentions # Get mentioned roles
+            roleStr = []
+            s = ctx.message.content[6:]
+            roleStr = s.split('"')
+
+        allowedRoles = []
+        serverID = ctx.message.server.id
+        
+        # Get allowed roles (JSON)
+        with open('data/serverData.json','r') as f:
+            data = json.load(f)
+        
+        if serverID in data and 'allowedRoles' in data[serverID] and data[serverID]['allowedRoles']:  # Check if server is registered / role data exists / role data not empty
+            allowedRoles = data[serverID]['allowedRoles']
+        else:  # No server/role data registered yet
+            await self.bot.say('No roles have been enabled to be used with !role. Use !allowRole to enable roles.')
+            return
+
+        user = ctx.message.author
+
+        for role in roles: # Evaluate mentioned roles
+            if role.id in allowedRoles:
+                if role in (user.roles):
+                    await self.bot.say('You have been removed from role "' + role.name + '"!')
+                    try:
+                        await self.bot.remove_roles(user, role)
+                    except:
+                        await self.bot.say('Error! Permission denied. Try checking ScottBot\'s permissions')
+                        return
+                else:
+                    await self.bot.say('You have been added to role "' + role.name + '"!')
+                    try:
+                        await self.bot.add_roles(user, role)
+                    except:
+                        await self.bot.say('Error! Permission denied. Try checking ScottBot\'s permissions')
+                        return
+            else: 
+                await self.bot.say('Error! Role: "' + role.name + '" is not enabled to be used with !role.')
+        
+        serverRoles = ctx.message.server.roles
+        
+        for role in roleStr:  # Evaluate quoted roles
+            found = False
+            if role == '' or role == ' ' or role[0] == '<':
+                continue
+            for serverRole in serverRoles:
+                if (role == serverRole.name):
+                    found = True
+                    if (serverRole.id in allowedRoles):
+                        if (serverRole in user.roles):
+                            await self.bot.say('You have been removed from role: "' + serverRole.name + '"!')
+                            await self.bot.remove_roles(user, serverRole)
+                        else:
+                            await self.bot.say('You have been added to role: "' + serverRole.name + '"!')
+                            await self.bot.add_roles(user, serverRole)
+                    else:
+                        await self.bot.say('Error! Role: "' + serverRole.name + '" is not enabled to be used with !role.')
+            if not found:
+                await self.bot.say('Error! Role: "' + role + '" not found!')
+
+    @commands.command(pass_context=True)
+    async def roles(self, ctx):
+        '''Shows roles available to join/leave.'''
+        # Get allowed roles (JSON)
+        serverID = ctx.message.server.id
+        with open('data/serverData.json', 'r') as f:
+            data = json.load(f)
+        if serverID in data and 'allowedRoles' in data[serverID] and data[serverID]['allowedRoles']:  # Check if server is registered / role data exists / role data not empty
+            allowedRoles = data[serverID]['allowedRoles']
+        else:  # No server/role data registered yet
+            await self.bot.say('No roles have been enabled to be used with !role. Use !allowRole to enable roles.')
+            return
+
+        user = ctx.message.author
+        user_roles = user.roles
+        emoji = [':one:', ':two:', ':three:', ':four:', ':five:', ':six:', ':seven:', ':eight:', ':nine:']
+        react = ['1⃣', '2⃣', '3⃣', '4⃣', '5⃣', '6⃣', '7⃣', '8⃣', '9⃣'] # unicode for emoji's 1-9
+        total_roles = len(allowedRoles)
+        # Allowed roles can fit in one message
+        TIMEOUT = 30
+        if total_roles <= 9:
+            content = f'Choose the role(s) you would like to join/leave (Active for {TIMEOUT} seconds):\n'
+            for i in range(total_roles):
+                role = get(ctx.message.server.roles, id=allowedRoles[i])
+                content += f'{emoji[i]} '
+                if role in user_roles:
+                    content += 'Leave'
+                else:
+                    content += 'Join'
+                content += f' `{role}`\n'
+            msg = await self.bot.say(content)
+            for i in range(total_roles):
+                await self.bot.add_reaction(msg, react[i])
+            start = time.time()
+            while time.time() < start + TIMEOUT:
+                reaction = await self.bot.wait_for_reaction(react[:total_roles], message=msg, timeout=TIMEOUT)
+                if not reaction or reaction.user != user:
+                    continue
+                e = reaction.reaction.emoji
+                role = get(ctx.message.server.roles, id=allowedRoles[react.index(e)])
+                if role in user.roles:
+                    await self.bot.remove_roles(user, role)
+                    await self.bot.say(f'You have left `{role}`!')
+                    content = content.replace(f'Leave `{role}`', f'Join `{role}`')
+                    await self.bot.edit_message(msg, new_content=content)
+                else:
+                    await self.bot.add_roles(user, role)
+                    await self.bot.say(f'You have joined `{role}`!')
+                    content = content.replace(f'Join `{role}`', f'Leave `{role}`')
+                    await self.bot.edit_message(msg, new_content=content)
+            return
+
+        # Over 9 Allowed Roles
+        TIMEOUT = 90
+        content = f'Choose the role(s) you would like to join/leave (Active for {TIMEOUT} seconds):\n'
+        for i in range(9):
+            role = get(ctx.message.server.roles, id=allowedRoles[i])
+            content += f'{emoji[i]} '
+            if role in user_roles:
+                content += 'Leave'
+            else:
+                content += 'Join'
+            content += f' `{role}`\n'
+        msg = await self.bot.say(content)
+        await self.bot.add_reaction(msg, u"\u25C0")
+        for i in range(9):
+            await self.bot.add_reaction(msg, react[i])
+        await self.bot.add_reaction(msg, u"\u25B6")
+        start = time.time()
+        page = 0
+        while time.time() < start + TIMEOUT:
+            if page*9 + 8 >= total_roles:
+                on_page = total_roles % 9
+            else:
+                on_page = 9
+            all_emoji = react[:on_page] + [u"\u25C0", u"\u25B6"]
+            reaction = await self.bot.wait_for_reaction(all_emoji, message=msg, timeout=TIMEOUT)
+            if not reaction or reaction.user != user:
+                continue
+            e = reaction.reaction.emoji
+            # Back
+            if e == u"\u25C0":
+                if page == 0:  # Already on the first page
+                    continue
+                page -= 1
+                count = 0
+                content = f'Choose the role(s) you would like to join/leave (Active for {TIMEOUT} seconds):\n'
+                for i in range(page*9, page*9+9):
+                    role = get(ctx.message.server.roles, id=allowedRoles[i])
+                    content += f'{emoji[count]} '
+                    if role in user_roles:
+                        content += 'Leave'
+                    else:
+                        content += 'Join'
+                    content += f' `{role}`\n'
+                    count += 1
+                await self.bot.edit_message(msg, new_content=content)
+                continue
+            # Forward
+            if e == u"\u25B6":
+                if page*9 + 8 >= total_roles - 1:  # Already on the last page
+                    continue
+                page += 1
+                count = 0
+                if page * 9 + 8 >= total_roles:  # Already on the last page
+                    end = page*9 + total_roles % 9
+                else:
+                    end = page*9 + 9
+                content = 'Choose the role(s) you would like to join/leave (Active for {TIMEOUT} seconds):\n'
+                for i in range(page*9, end):
+                    role = get(ctx.message.server.roles, id=allowedRoles[i])
+                    content += f'{emoji[count]} '
+                    if role in user_roles:
+                        content += 'Leave'
+                    else:
+                        content += 'Join'
+                    content += f' `{role}`\n'
+                    count += 1
+                await self.bot.edit_message(msg, new_content=content)
+                continue
+            # Role Change
+            role = get(ctx.message.server.roles, id=allowedRoles[react.index(e) + page*9])
+            if role in user.roles:
+                await self.bot.remove_roles(user, role)
+                await self.bot.say(f'You have left `{role}`!')
+                content = content.replace(f'Leave `{role}`', f'Join `{role}`')
+                await self.bot.edit_message(msg, new_content=content)
+            else:
+                await self.bot.add_roles(user, role)
+                await self.bot.say(f'You have joined `{role}`!')
+                content = content.replace(f'Join `{role}`', f'Leave `{role}`')
+                await self.bot.edit_message(msg, new_content=content)
+
+    @commands.command(pass_context=True)
+    async def request(self, ctx):
+        '''Request a feature you would like added to ScottBot.'''
+        msg = ctx.message.content[9:]
+        if len(msg) == 0:
+            await self.bot.say('Error! No request provided.')
+            return
+
+        # Append to file
+        req = '\"{}\" - {}\n'.format(msg, ctx.message.author.name)
+        with open('data/requests.txt', 'a') as f:
+            f.write(req)
+        s3.upload_file('data/requests.txt', BUCKET_NAME, 'requests.txt')
+
+        emailContent = 'Subject: New Feature Request for ScottBot\n\nUser: {}\nServer: {}\n\n{}'.format(str(ctx.message.author), str(ctx.message.server), msg)
+
+        # GMail
+        FROM_EMAIL = os.environ.get('FROM_EMAIL', None)
+        FROM_PSWD = os.environ.get('FROM_PSWD', None)
+        TO_EMAIL = os.environ.get('TO_EMAIL', None)
+
+        s = smtplib.SMTP('smtp.gmail.com', 587)
+        s.starttls()
+        s.login(FROM_EMAIL, FROM_PSWD)
+        s.sendmail(FROM_EMAIL, TO_EMAIL, emailContent)
+        s.quit()
+        
+        await self.bot.say('Request sent!')
+    
+    @commands.command(pass_context=False)
+    async def version(self):
+        '''Prints ScottBot Version.'''
+        await self.bot.say('ScottBot is running Version: ' + VERSION)
+
+    @commands.command(pass_context=True)
+    async def hello(self, ctx):
+        '''ScottBot greets you.'''
+        name = ctx.message.author.mention
+        await self.bot.say("Hello {}!".format(name))
+
+    @commands.command(pass_context=True)
     async def poll(self, ctx):
-        '''Creates a poll: !poll "Question" "Choice" "Choice"'''
+        '''Creates a poll: !poll Question | Choice | Choice'''
         # Check for valid input and parse
         try:
             msg = ctx.message.content[6:]
-            msg = msg.split('|') #Split questions and choices\
+            msg = msg.split('|')  # Split questions and choices\
             question = msg[0]
             choices = msg[1:]
         except:
@@ -228,7 +349,7 @@ class Misc:
         except:
             print('need admin D:')
 
-        #Print and React
+        # Print and React
         author = ctx.message.author
         poll = await self.bot.say(pollPrint(question, choices, author))
         emoji = ['1⃣', '2⃣', '3⃣', '4⃣', '5⃣', '6⃣', '7⃣', '8⃣', '9⃣'] # unicode for emoji's 1-9 
@@ -241,7 +362,7 @@ def pollPrint(question: str, choices: list, author: discord.User):
     rtn = 'Poll by ' + author.mention + ':\n'
     rtn += question + '\n'
     for i in range(len(choices)):
-        rtn += emoji[i] + ' ' + choices[i].lstrip(' ') + '\n' # strip to remove extra spaces at front/back
+        rtn += emoji[i] + ' ' + choices[i].lstrip(' ') + '\n'  # strip to remove extra spaces at front/back
     return rtn    
 
 def setup(bot):

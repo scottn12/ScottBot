@@ -8,7 +8,7 @@ import json
 import time
 
 PREFIX = '!'
-VERSION = '2.4.7'
+VERSION = '2.5'
 
 # S3 Globals
 ACCESS_KEY_ID = os.environ.get('ACCESS_KEY_ID', None)
@@ -18,7 +18,7 @@ REGION_NAME = os.environ.get('REGION_NAME', None)
 session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key=ACCESS_SECRET_KEY, region_name=REGION_NAME)
 s3 = session.client('s3')
 
-bot = commands.Bot(command_prefix = PREFIX, description = 'ScottBot Version: ' + VERSION)
+bot = commands.Bot(command_prefix=PREFIX, description=f'ScottBot Version: {VERSION}')
 
 
 @bot.event

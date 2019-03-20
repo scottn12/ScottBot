@@ -1,8 +1,8 @@
 import discord
 from discord.ext import commands
-from boto3.session import Session
-from bot import ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME, s3
+from bot import BUCKET_NAME, s3
 import json
+import time
 
 class Admin:
     '''Commands for server administrators only.'''
@@ -10,77 +10,156 @@ class Admin:
         self.bot = bot
 
     @commands.command(pass_context=True)
-    async def allowRole(self, ctx): 
-        '''Enables/Disables role(s) to be used with !role.'''
-        if (not await self.isAdmin(ctx)): # Check Admin
-            await self.bot.say('Only admins may use !enableAddRole.')
+    async def manageRoles(self, ctx):
+        '''Enable/Disable role(s) to be used with !roles.'''
+        if not await self.isAdmin(ctx):  # Check Admin
+            await self.bot.say('Only admins may use !allowRoles.')
             return
 
-        roles = ctx.message.role_mentions # Get mentioned roles
-        roleStr = []
-        if len(ctx.message.content) < 12 and not roles:
-            await self.bot.say('No role(s) given! Use the following format: !role @role/"role"')
-            return
-        else:
-            s = ctx.message.content[11:]
-            roleStr = s.split('"')
-
-        roleIDS = [] 
-        serverRoles = ctx.message.server.roles
-        for role in roles: # Check mentioned roles
-            if role.is_everyone:
-                await self.bot.say('Error! Role: "everyone" is not a valid role.')
-                continue
-            if role.permissions < discord.Permissions.all():
-                roleIDS.append(role.id)
-            else: 
-                await self.bot.say('Error! Role: "' + role.name + '" is an administrator role.')
-
-        for role in roleStr: # Check quotes roles
-            if role == '' or role == ' ' or role[0]=='<':
-                continue
-            if role == 'everyone':
-                await self.bot.say('Error! Role: "everyone" is not a valid role.')
-                continue
-            found = False
-            for serverRole in serverRoles:
-                if (serverRole.name == role):
-                    found = True
-                    if serverRole.permissions < discord.Permissions.all():
-                        roleIDS.append(serverRole.id)
-                    else:
-                        await self.bot.say('Error! Role: "' + role + '" is an administrator role.')
-            if not found:
-                await self.bot.say('Error! Role: "' + role + '" not found!')
-        
-        # UPDATE JSON
-        with open('data/serverData.json','r') as f:
-            data = json.load(f)
-
+        # Get allowed roles (JSON)
         serverID = ctx.message.server.id
-
-        if serverID in data: # Check if server is registered yet 
-            if 'allowedRoles' in data[serverID]: # Check if roles are registered yet
-                rolesJSON = data[serverID]['allowedRoles']
-                for role in roleIDS:
-                    if role in rolesJSON:
-                        rolesJSON.remove(role)
-                        await self.bot.say(discord.utils.get(ctx.message.server.roles, id=role).name + ' has been disabled.')
-                    else:
-                        rolesJSON.append(role)
-                        await self.bot.say(discord.utils.get(ctx.message.server.roles, id=role).name + ' has been enabled.')
-            else: # add role field
-                data[serverID]['allowedRoles'] = roleIDS
-                await self.bot.say('All mentioned roles enabled.')
-        else: # new server
+        with open('data/serverData.json', 'r') as f:
+            data = json.load(f)
+        if serverID in data:
+            if 'allowedRoles' in data[serverID]:
+                allowed_roles = data[serverID]['allowedRoles']
+            else:  # No Role data
+                allowed_roles = []
+                data[serverID]['allowedRoles'] = allowed_roles
+        else:  # New Server
+            allowed_roles = []
             data[serverID] = {
-                "allowedRoles" : roleIDS
+                "allowedRoles" : allowed_roles
             }
-            await self.bot.say('All mentioned roles enabled.')
 
-        with open('data/serverData.json', 'w') as f: # Update JSON
-            json.dump(data, f, indent=2)
-        s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
+        # Get list of all valid roles to add/remove
+        roles = []
+        all_roles = ctx.message.server.roles
+        for role in all_roles:
+            if role.permissions >= discord.Permissions.all() or role.is_everyone:
+                continue
+            roles.append(role)
+        roles_len = len(roles)
+        emoji = [':one:', ':two:', ':three:', ':four:', ':five:', ':six:', ':seven:', ':eight:', ':nine:']
+        react = ['1⃣', '2⃣', '3⃣', '4⃣', '5⃣', '6⃣', '7⃣', '8⃣', '9⃣']  # unicode for emoji's 1-9
+
+        # Roles can fit in one message
+        TIMEOUT = 30
+        if roles_len <= 9:
+            content = f'Choose the role(s) you would like to add/remove (Active for {TIMEOUT} seconds):\n'
+            for i in range(roles_len):
+                content += f'{emoji[i]} '
+                if roles[i].id in allowed_roles:
+                    content += f'Remove `{roles[i]}`\n'
+                else:
+                    content += f'Add `{roles[i]}`\n'
+            msg = await self.bot.say(content)
+            for i in range(roles_len):
+                await self.bot.add_reaction(msg, react[i])
+            start = time.time()
+            while time.time() < start + TIMEOUT:
+                reaction = await self.bot.wait_for_reaction(react[:roles_len], message=msg, timeout=TIMEOUT)
+                if not reaction or reaction.user != ctx.message.author:
+                    continue
+                e = reaction.reaction.emoji
+                role = roles[react.index(e)]
+                if role.id in allowed_roles:
+                    allowed_roles.remove(role.id)
+                    await self.bot.say(f'You have removed `{role}`!')
+                    content = content.replace(f'Remove `{role}`', f'Add `{role}`')
+                    await self.bot.edit_message(msg, new_content=content)
+                else:
+                    allowed_roles.append(role.id)
+                    await self.bot.say(f'You have added `{role}`!')
+                    content = content.replace(f'Add `{role}`', f'Remove `{role}`')
+                    await self.bot.edit_message(msg, new_content=content)
+                # Update
+                data[serverID]['allowedRoles'] = allowed_roles
+                with open('data/serverData.json', 'w') as f:
+                    json.dump(data, f, indent=2)
+                s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
+            return
+
+        # Over 9 Roles
+        TIMEOUT = 90
+        content = f'Choose the role(s) you would like to add/remove (Active for {TIMEOUT} seconds):\n'
+        for i in range(9):
+            content += f'{emoji[i]} '
+            if roles[i].id in allowed_roles:
+                content += f'Remove `{roles[i]}`\n'
+            else:
+                content += f'Add `{roles[i]}`\n'
+        msg = await self.bot.say(content)
+        await self.bot.add_reaction(msg, u"\u25C0")
+        for i in range(9):
+            await self.bot.add_reaction(msg, react[i])
+        await self.bot.add_reaction(msg, u"\u25B6")
+        start = time.time()
+        page = 0
+        while time.time() < start + TIMEOUT:
+            if page * 9 + 8 >= roles_len:
+                on_page = roles_len % 9
+            else:
+                on_page = 9
+            all_emoji = react[:on_page] + [u"\u25C0", u"\u25B6"]
+            reaction = await self.bot.wait_for_reaction(all_emoji, message=msg, timeout=TIMEOUT)
+            if not reaction or reaction.user != ctx.message.author:
+                continue
+            e = reaction.reaction.emoji
+            # Back
+            if e == u"\u25C0":
+                if page == 0:  # Already on the first page
+                    continue
+                page -= 1
+                count = 0
+                content = f'Choose the role(s) you would like to add/remove (Active for {TIMEOUT} seconds):\n'
+                for i in range(page * 9, page * 9 + 9):
+                    content += f'{emoji[count]} '
+                    if roles[i].id in allowed_roles:
+                        content += f'Remove `{roles[i]}`\n'
+                    else:
+                        content += f'Add `{roles[i]}`\n'
+                    count += 1
+                await self.bot.edit_message(msg, new_content=content)
+                continue
+            # Forward
+            if e == u"\u25B6":
+                if page * 9 + 8 >= roles_len - 1:  # Already on the last page
+                    continue
+                page += 1
+                count = 0
+                if page * 9 + 8 >= roles_len:  # Already on the last page
+                    end = page * 9 + roles_len % 9
+                else:
+                    end = page * 9 + 9
+                content = 'Choose the role(s) you would like to join/leave (Active for {TIMEOUT} seconds):\n'
+                for i in range(page * 9, end):
+                    content += f'{emoji[count]} '
+                    if roles[i].id in allowed_roles:
+                        content += f'Remove `{roles[i]}`\n'
+                    else:
+                        content += f'Add `{roles[i]}`\n'
+                    count += 1
+                await self.bot.edit_message(msg, new_content=content)
+                continue
+            # Make change
+            role = roles[react.index(e) + page * 9]
+            if role.id in allowed_roles:
+                allowed_roles.remove(role.id)
+                await self.bot.say(f'You have removed `{role}`!')
+                content = content.replace(f'Remove `{role}`', f'Add `{role}`')
+                await self.bot.edit_message(msg, new_content=content)
+            else:
+                allowed_roles.append(role.id)
+                await self.bot.say(f'You have added `{role}`!')
+                content = content.replace(f'Add `{role}`', f'Remove `{role}`')
+                await self.bot.edit_message(msg, new_content=content)
+            # Update
+            data[serverID]['allowedRoles'] = allowed_roles
+            with open('data/serverData.json', 'w') as f:
+                json.dump(data, f, indent=2)
+            s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
+
 
     @commands.command(pass_context=True)
     async def allowStreamPing(self, ctx):
@@ -135,42 +214,27 @@ class Admin:
 
     @commands.command(pass_context=True)
     async def clear(self, ctx):
-        '''Deletes all commands and messages from ScottBot.'''
-
-        if (not await self.isAdmin(ctx)):
-            await self.bot.say('Only admins may use !clear.')
-            return
-
-        async for message in self.bot.logs_from(ctx.message.channel):
-            if (message.author == self.bot.user or message.content[0] == '!'):
-                # Delete
-                async for message in self.bot.logs_from(ctx.message.channel):
-                    try:
-                        await self.bot.delete_message(message)
-                    except:
-                        await self.bot.say('Error! Permission denied.')
-                        return
-
-    @commands.command(pass_context=True)
-    async def clearAlls(self, ctx):
         '''Clears all messages in the text channel.'''
-        
-        if (not await self.isAdmin(ctx)):
+
+        if not await self.isAdmin(ctx):
             await self.bot.say('Only admins may use !clear.')
             return
 
-        await self.bot.say("Are you sure you want to permanently clear all the messages from this channel? Type 'Y' to confirm.")
-        if (not await self.confirmAction(ctx)):
+        test_msg = await self.bot.say("Are you sure you want to permanently clear all the messages from this channel? Type 'Y' to confirm.")
+        if not await self.confirmAction(ctx):
             await self.bot.say('Clear aborted.')
+            return
+
+        # Test for permissions
+        try:
+            await self.bot.delete_message(test_msg)
+        except:
+            await self.bot.say('Error! ScottBot needs permissions to do this!')
             return
 
         # Delete
         async for message in self.bot.logs_from(ctx.message.channel):
-            try:
-                await self.bot.delete_message(message)
-            except:
-                await self.bot.say('Error! Permission denied.')
-                return
+            await self.bot.delete_message(message)
 
     @commands.command(pass_context=True)
     async def resetData(self, ctx):
@@ -200,22 +264,6 @@ class Admin:
             json.dump(data, f, indent=2)
         s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
 
-    """@commands.command(pass_context=True)
-    async def changePrefix(self, ctx): #NOT FINISHED
-        '''Changes the prefix for ScottBot commands.'''
-        if (not await self.isAdmin(ctx)):
-            await self.bot.say('Only admins may use !changePrefix.')
-            return
-    
-        import string
-        newPrefix = ctx.message.content[14:]
-        if (newPrefix in string.punctuation):
-            #await self.bot.say('Prefix successfully changed!')
-            x = 2 #nothing
-        else:
-            await self.bot.say('Invalid prefix. New prefix must be a single punctuation character.')
-            return"""
-
     @commands.command(pass_context=True)
     async def flakeReset(self, ctx):
         '''Resets the flakeRank.'''
@@ -237,7 +285,23 @@ class Admin:
         conn.close()
 
         s3.upload_file('bot_database.db', BUCKET_NAME, 'bot_database.db')
-        
+
+    """@commands.command(pass_context=True)
+    async def changePrefix(self, ctx): #NOT FINISHED
+        '''Changes the prefix for ScottBot commands.'''
+        if (not await self.isAdmin(ctx)):
+            await self.bot.say('Only admins may use !changePrefix.')
+            return
+
+        import string
+        newPrefix = ctx.message.content[14:]
+        if (newPrefix in string.punctuation):
+            #await self.bot.say('Prefix successfully changed!')
+            x = 2 #nothing
+        else:
+            await self.bot.say('Invalid prefix. New prefix must be a single punctuation character.')
+            return"""
+
     async def isAdmin(self, ctx):
         user = ctx.message.author
         permissions = user.permissions_in(ctx.message.channel)
@@ -247,7 +311,7 @@ class Admin:
 
     async def confirmAction(self, ctx):
         msg = await self.bot.wait_for_message(timeout=10, author=ctx.message.author)
-        if (msg == None or msg.content.lower() != 'y'):
+        if msg == None or msg.content.lower() != 'y':
             return False
         return True
 

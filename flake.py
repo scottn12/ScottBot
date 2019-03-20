@@ -1,9 +1,6 @@
-import discord
 from discord.ext import commands
 import sqlite3
-import os
-from boto3.session import Session
-from bot import ACCESS_KEY_ID, ACCESS_SECRET_KEY, BUCKET_NAME, REGION_NAME, s3
+from bot import BUCKET_NAME, s3
 
 class Flake:
     '''Commands for Flakers.'''
@@ -36,7 +33,7 @@ class Flake:
         msg += '```'
         await self.bot.say(msg)
 
-# Setup Database  #NO LONGER NEEDED
+# Setup Database
 def createTable(name):
     conn = sqlite3.connect('data/bot_database.db')
     c = conn.cursor()
