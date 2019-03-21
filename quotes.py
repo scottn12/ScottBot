@@ -81,7 +81,7 @@ class Quotes:
     @commands.command(pass_context=True)
     async def q(self, ctx):
         """Alias for !quote."""
-        await self.randomQuote.invoke(ctx)
+        await self.quote.invoke(ctx)
 
     @commands.command(pass_context=True)
     async def randomQuote(self, ctx):
