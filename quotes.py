@@ -185,7 +185,7 @@ class Quotes:
                     content += f'{str(i+1):3s} {quotes[i]}\n'
                 content += '```'
                 await self.bot.edit_message(msg, new_content=content)
-        content = msg.content.replace(f'Active for {TIMEOUT//60} minutes.', 'NO LONGER ACTIVE')
+        content = content.replace(f'Active for {TIMEOUT//60} minutes.', 'NO LONGER ACTIVE')
         await self.bot.edit_message(msg, new_content=content)
 
     @commands.command(pass_context=True)

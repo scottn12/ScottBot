@@ -168,6 +168,11 @@ class Roles:
         await self.bot.edit_message(msg, new_content=content)
 
     @commands.command(pass_context=True)
+    async def mr(self, ctx):
+        """Alias for !manageRoles."""
+        await self.manageRoles.invoke(ctx)
+
+    @commands.command(pass_context=True)
     async def addRole(self, ctx, arg=None):
         '''Creats mentionable role with given name (ADMIN).'''
         if not await self.isAdmin(ctx):  # Check Admin
@@ -401,6 +406,11 @@ class Roles:
                 await self.bot.edit_message(msg, new_content=content)
         content = msg.content.replace(f'Active for {TIMEOUT} seconds', 'NO LONGER ACTIVE')
         await self.bot.edit_message(msg, new_content=content)
+
+    @commands.command(pass_context=True)
+    async def r(self, ctx):
+        """Alias for !roles."""
+        await self.roles.invoke(ctx)
 
     @commands.command(pass_context=True)
     async def roleRank(self, ctx):
