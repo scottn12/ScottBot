@@ -256,6 +256,7 @@ class Quotes:
                     json.dump(data, f, indent=2)
                 s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
                 await self.bot.say('Success!')
+                return
             else:
                 await self.bot.say('Change aborted.')
                 return
