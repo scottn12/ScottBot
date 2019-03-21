@@ -1,5 +1,5 @@
 # ScottBot
-ScottBot is a bot made for discord servers using python, sqlite, AWS S3, and JSON. It is hosted through Heroku using their automatic GitHub deployment integration.
+ScottBot is a bot made for discord servers using python, sqlite, AWS S3, and JSON. It is hosted through Heroku using their automatic GitHub deployment integration (That's why there are so many commits).
 
 To add ScottBot to your server click the following link:
 https://discordapp.com/oauth2/authorize?client_id=465969556633026604&scope=bot

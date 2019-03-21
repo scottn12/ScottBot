@@ -8,7 +8,6 @@ class Quotes:
     '''Commands for quotes.'''
     def __init__(self, bot):
         self.bot = bot
-        #self.bot.command(name='q', pass_context=True)(self.quote.callback)
 
     @commands.command(pass_context=True)
     async def addQuote(self, ctx):
@@ -151,12 +150,13 @@ class Quotes:
         await self.bot.add_reaction(msg, react[1])  # Forward
         page = 0
         start = time.time()
-        while time.time() < start + TIMEOUT:
+        end = start + TIMEOUT
+        while time.time() < end:
             if page * MAX + MAX-1 >= total:
                 on_page = total % MAX
             else:
                 on_page = MAX
-            reaction = await self.bot.wait_for_reaction(react, message=msg, timeout=int(start-time.time()))
+            reaction = await self.bot.wait_for_reaction(react, message=msg, timeout=int(end - time.time()))
             if not reaction or reaction.user == self.bot.user:
                 continue
             e = reaction.reaction.emoji
@@ -177,11 +177,11 @@ class Quotes:
                     continue
                 page += 1
                 if page * MAX + MAX-1 >= total:  # Already on the last page
-                    end = page * MAX + total % MAX
+                    end_i = page * MAX + total % MAX
                 else:
-                    end = page * MAX + MAX
+                    end_i = page * MAX + MAX
                 content = f'**Active for {TIMEOUT//60} minutes.**\n```'
-                for i in range(page * MAX, end):
+                for i in range(page * MAX, end_i):
                     content += f'{str(i+1):3s} {quotes[i]}\n'
                 content += '```'
                 await self.bot.edit_message(msg, new_content=content)
@@ -236,7 +236,7 @@ class Quotes:
         else:
             confirm = await self.bot.say(f'Change:\n```{quotes[quote_num - 1]}\nTO\n{new}```Press {thumbs[0]} to confirm and {thumbs[1]} to abort.')
 
-        TIMEOUT = 15
+        TIMEOUT = 180
         await self.bot.add_reaction(confirm, thumbs[0])
         await self.bot.add_reaction(confirm, thumbs[1])
         start = time.time()

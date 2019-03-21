@@ -6,7 +6,7 @@ import json
 import time
 
 class Roles:
-    '''Commands for role management.'''
+    """Commands for role management."""
     def __init__(self, bot):
         self.bot = bot
 
@@ -80,7 +80,7 @@ class Roles:
                 with open('data/serverData.json', 'w') as f:
                     json.dump(data, f, indent=2)
                 s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
-            content = msg.content.replace(f'Active for {TIMEOUT} seconds', 'NO LONGER ACTIVE')
+            content = content.replace(f'Active for {TIMEOUT} seconds', 'NO LONGER ACTIVE')
             await self.bot.edit_message(msg, new_content=content)
             return
 
@@ -134,11 +134,11 @@ class Roles:
                 page += 1
                 count = 0
                 if page * 9 + 8 >= roles_len:  # Already on the last page
-                    end = page * 9 + roles_len % 9
+                    end_i = page * 9 + roles_len % 9
                 else:
-                    end = page * 9 + 9
+                    end_i = page * 9 + 9
                 content = f'Choose the role(s) you would like to join/leave (**Active for {TIMEOUT} seconds**):\n'
-                for i in range(page * 9, end):
+                for i in range(page * 9, end_i):
                     content += f'{emoji[count]} '
                     if roles[i].id in allowed_roles:
                         content += f'Remove `{roles[i]}`\n'
@@ -164,7 +164,7 @@ class Roles:
             with open('data/serverData.json', 'w') as f:
                 json.dump(data, f, indent=2)
             s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
-        content = msg.content.replace(f'Active for {TIMEOUT} seconds', 'NO LONGER ACTIVE')
+        content = content.replace(f'Active for {TIMEOUT} seconds', 'NO LONGER ACTIVE')
         await self.bot.edit_message(msg, new_content=content)
 
     @commands.command(pass_context=True)
@@ -265,8 +265,7 @@ class Roles:
         serverID = ctx.message.server.id
         with open('data/serverData.json', 'r') as f:
             data = json.load(f)
-        if serverID in data and 'allowedRoles' in data[serverID] and data[serverID][
-            'allowedRoles']:  # Check if server is registered / role data exists / role data not empty
+        if serverID in data and 'allowedRoles' in data[serverID] and data[serverID]['allowedRoles']:  # Check if server is registered / role data exists / role data not empty
             allowedRoles = data[serverID]['allowedRoles']
         else:  # No server/role data registered yet
             await self.bot.say('No roles have been enabled to be used with !role. Use !allowRole to enable roles.')
@@ -319,7 +318,7 @@ class Roles:
                     await self.bot.say(f'{user} has joined `{role}`!')
                     content = content.replace(f'Join `{role}`', f'Leave `{role}`')
                     await self.bot.edit_message(msg, new_content=content)
-            content = msg.content.replace(f'Active for {TIMEOUT} seconds', 'NO LONGER ACTIVE')
+            content = content.replace(f'Active for {TIMEOUT} seconds', 'NO LONGER ACTIVE')
             await self.bot.edit_message(msg, new_content=content)
             return
 
@@ -377,11 +376,11 @@ class Roles:
                 page += 1
                 count = 0
                 if page * 9 + 8 >= total_roles:  # Already on the last page
-                    end = page * 9 + total_roles % 9
+                    end_i = page * 9 + total_roles % 9
                 else:
-                    end = page * 9 + 9
+                    end_i = page * 9 + 9
                 content = f'Choose the role(s) {user.mention} would like to join/leave (**Active for {TIMEOUT} seconds**):\n'
-                for i in range(page * 9, end):
+                for i in range(page * 9, end_i):
                     role = get(ctx.message.server.roles, id=allowedRoles[i])
                     content += f'{emoji[count]} '
                     if role in user_roles:
@@ -404,7 +403,7 @@ class Roles:
                 await self.bot.say(f'{user} has joined `{role}`!')
                 content = content.replace(f'Join `{role}`', f'Leave `{role}`')
                 await self.bot.edit_message(msg, new_content=content)
-        content = msg.content.replace(f'Active for {TIMEOUT} seconds', 'NO LONGER ACTIVE')
+        content = content.replace(f'Active for {TIMEOUT} seconds', 'NO LONGER ACTIVE')
         await self.bot.edit_message(msg, new_content=content)
 
     @commands.command(pass_context=True)
@@ -424,6 +423,13 @@ class Roles:
             content += f'{str(role):24s}\t{count}\n'
         content += '```'
         await self.bot.say(content)
+
+    async def isAdmin(self, ctx):
+        user = ctx.message.author
+        permissions = user.permissions_in(ctx.message.channel)
+        if not permissions.administrator:
+            return False
+        return True
 
 def setup(bot):
     bot.add_cog(Roles(bot))
