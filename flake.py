@@ -8,6 +8,28 @@ class Flake:
         self.bot = bot
 
     @commands.command(pass_context=True)
+    async def flakeReset(self, ctx):
+        '''Resets the flakeRank (ADMIN).'''
+        if (not await self.isAdmin(ctx)):
+            await self.bot.say('Only admins may use !flakeReset.')
+            return
+
+        await self.bot.say("Are you sure you want to permanently reset the flakeRank? Type 'Y' to confirm.")
+        if (not await self.confirmAction(ctx)):
+            await self.bot.say('Reset aborted.')
+            return
+
+        # Reset
+        import sqlite3
+        conn = sqlite3.connect('data/bot_database.db')
+        c = conn.cursor()
+        c.execute('DROP TABLE IF EXISTS flake' + ctx.message.server.id)
+        c.close()
+        conn.close()
+
+        s3.upload_file('bot_database.db', BUCKET_NAME, 'bot_database.db')
+
+    @commands.command(pass_context=True)
     async def flake(self, ctx):
         '''Increments the flake count for all flakers mentioned.'''
         serverID = ctx.message.server.id

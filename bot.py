@@ -8,7 +8,7 @@ import json
 import time
 
 PREFIX = '!'
-VERSION = '2.5.2'
+VERSION = '2.6'
 
 # S3 Globals
 ACCESS_KEY_ID = os.environ.get('ACCESS_KEY_ID', None)
@@ -86,7 +86,7 @@ async def on_member_update(before, after): # Stream Ping
         print('done!')
 
 if __name__ == '__main__':
-    for extension in ['admin', 'flake', 'misc']:
+    for extension in ['admin', 'flake', 'misc', 'roles', 'quotes']:
         print('Loading ' + extension + '...')
         bot.load_extension(extension)
     bot.run(os.environ.get('BOT_TOKEN', None))
