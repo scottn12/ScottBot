@@ -69,7 +69,7 @@ class Quotes:
         try:
             index = int(ctx.message.content.split()[1])
         except:
-            await self.bot.say('Error! No quote number provided! Use `!allQuotes` to see full list quotes.')
+            await self.bot.say('Error! No quote number provided! Use `!allQuotes` to see the full list quotes.')
             return
 
         if index > len(quotes) or index <= 0:
@@ -212,7 +212,7 @@ class Quotes:
         else:
             content = content[13:]
         if content == '':
-            await self.bot.say('Error! Use the format `!changeQuote quoteNumber newQuote`')
+            await self.bot.say('Error! Use the format: `!changeQuote quoteNumber newQuote`')
             return
         try:
             index = content.index(' ')
@@ -267,6 +267,123 @@ class Quotes:
     async def cq(self, ctx):
         """Alias for !changeQuote."""
         await self.changeQuote.invoke(ctx)
+
+    @commands.command(pass_context=True)
+    async def searchQuote(self, ctx):
+        """Search for quotes."""
+        with open('data/serverData.json', 'r') as f:
+            data = json.load(f)
+        serverID = ctx.message.server.id
+        if serverID in data and 'quotes' in data[serverID] and data[serverID]['quotes']:  # Check if server/quotes are registered
+            quotes = data[serverID]['quotes']
+        else:
+            await self.bot.say('Error! No quotes registered yet! Use `!addQuote` to add quotes.')
+            return
+
+        # Parse
+        content = ctx.message.content
+        if content[:3] == '!sq':
+            content = content[4:]
+        else:
+            content = content[13:]
+        if content == '':
+            await self.bot.say('Error! Use the format: `!searchQuote keyword1 keyword2 keyword3`')
+            return
+        keywords = content.split()
+
+        results = {}
+
+        quoteNum = 1
+        total_results = 0
+        total_len = 0
+        for quote in quotes:
+            matches = 0
+            for keyword in keywords:
+                if keyword.lower() in quote.lower():
+                    matches += 1
+            if matches == 0:
+                pass
+            elif matches in results:
+                results[matches].append((quoteNum, quote))
+                total_results += 1
+                total_len += len(quote)
+            else:
+                results[matches] = [(quoteNum, quote)]
+                total_results += 1
+                total_len += len(quote)
+            quoteNum += 1
+
+        if len(results) == 0:
+            await self.bot.say('No matches found!')
+            return
+
+        content = f'**{total_results} Matches Found!**\n'
+        if total_len < 1500:  # Fits on one page
+            for key in sorted(results.keys(), reverse=True):
+                content += f'{key} keyword'
+                if key == 1:
+                    content += f' matched ({len(results[key])}):\n```'
+                else:
+                    content += f's matched ({len(results[key])}):\n```'
+                for value in results[key]:
+                    content += f'{str(value[0]):3s} {value[1]}\n'
+                content += '```'
+            await self.bot.say(content)
+            return
+
+        # Set up pages
+        pages = [f'**{total_results} Matches Found!**\n']
+        page = 0
+        for key in sorted(results.keys(), reverse=True):
+            start = f'{key} keyword'
+            if key == 1:
+                start += f' matched ({len(results[key])}):\n```'
+            else:
+                start += f's matched ({len(results[key])}):\n```'
+            pages[page] += start
+            for value in results[key]:
+                if len(pages[page]) > 1000:  # Reached end of page
+                    pages[page] += '```'
+                    pages.append(start)
+                    page += 1
+                pages[page] += f'{str(value[0]):3s} {value[1]}\n'
+            pages[page] += '```'
+
+        # Send message and wait for reactions
+        msg = await self.bot.say(pages[0])
+        page = 0
+        react = [u"\u25C0", u"\u25B6"]
+        await self.bot.add_reaction(msg, react[0])  # Back
+        await self.bot.add_reaction(msg, react[1])  # Forward
+        TIMEOUT = 180
+        start = time.time()
+        end = start + TIMEOUT
+        while time.time() < end:
+            reaction = await self.bot.wait_for_reaction(react, message=msg, timeout=int(end - time.time()))
+            if not reaction or reaction.user == self.bot.user:
+                continue
+            e = reaction.reaction.emoji
+            # Back
+            if e == u"\u25C0":
+                if page == 0:  # Already on the first page
+                    continue
+                page -= 1
+                await self.bot.edit_message(msg, new_content=pages[page])
+                continue
+            # Forward
+            else:
+                if page == len(pages) - 1:  # Already on last page
+                    continue
+                page += 1
+                await self.bot.edit_message(msg, new_content=pages[page])
+        content = '**NO LONGER ACTIVE**\n' + pages[page] + '**NO LONGER ACTIVE**\n'
+        await self.bot.edit_message(msg, new_content=content)
+
+
+    @commands.command(pass_context=True)
+    async def sq(self, ctx):
+        """Alias for !searchQuote."""
+        await self.searchQuote.invoke(ctx)
 
 def setup(bot):
     bot.add_cog(Quotes(bot))

@@ -195,7 +195,7 @@ class Roles:
     async def role(self, ctx):
         '''Join/leave a role using !role @role/"role"'''
         if len(ctx.message.content) < 7:
-            await self.bot.say('No role(s) given! Use the following format: !role @role/"role"')
+            await self.bot.say('No role(s) given! Use the following format: `!role @role/"role"` or use `!roles`.')
             return
         else:
             roles = ctx.message.role_mentions  # Get mentioned roles

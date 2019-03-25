@@ -1,12 +1,7 @@
-import discord
 from discord.ext import commands
-from discord.utils import get
 from bot import VERSION, BUCKET_NAME, s3
-import json
-import smtplib 
+import smtplib
 import os
-import time
-import random
 
 class Misc:
     '''Miscellaneous commands anyone can use.'''

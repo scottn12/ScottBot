@@ -6,11 +6,12 @@ import os
 from boto3.session import Session
 import json
 import time
+import asyncio
 
 PREFIX = '!'
 VERSION = '2.6.2'
 
-# S3 Globals
+# S3 Setup
 ACCESS_KEY_ID = os.environ.get('ACCESS_KEY_ID', None)
 ACCESS_SECRET_KEY = os.environ.get('ACCESS_SECRET_KEY', None)
 BUCKET_NAME = os.environ.get('BUCKET_NAME', None)
@@ -36,9 +37,9 @@ async def on_ready():
     await bot.change_presence(game=discord.Game(name='Overcooked'))
     print(bot.user.name + ' Version: ' + VERSION + " is ready!")
 
-
+# Stream Ping
 @bot.event
-async def on_member_update(before, after): # Stream Ping
+async def on_member_update(before, after):
     if (before.game == None or before.game.type != 1) and (after.game != None and after.game.type == 1): # Before = Not Streaming, After = Streaming
         serverID = before.server.id
         with open('data/serverData.json','r') as f: # Load server data JSON
@@ -78,7 +79,7 @@ async def on_member_update(before, after): # Stream Ping
             print(str(curr)+'\t'+str(cooldownTime) + '\t' + str(cooldownTime-curr))
 
         # Update cooldown time (7200 seconds = 2 hours)
-        time.sleep(1)
+        await asyncio.sleep(5)
         data[userID] = time.time() + 7200
         with open('data/streams.json', 'w') as f:  # Update Streams JSON
             json.dump(data, f, indent=2)
