@@ -376,7 +376,7 @@ class Quotes:
                     continue
                 page += 1
                 await self.bot.edit_message(msg, new_content=pages[page])
-        content = '**NO LONGER ACTIVE**\n' + pages[page] + '**NO LONGER ACTIVE**\n'
+        content = pages[page] + '**NO LONGER ACTIVE**'
         await self.bot.edit_message(msg, new_content=content)
 
 
