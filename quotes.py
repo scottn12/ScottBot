@@ -48,8 +48,7 @@ class Quotes:
             }
             total = 1
 
-        with open('data/serverData.json', 'w') as f:  # Update JSON
-            json.dump(data, f, indent=2)
+        self.writeJSON('data/serverData.json')
         s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
 
         await self.bot.say(f'Quote **{total}** added!')
@@ -269,8 +268,7 @@ class Quotes:
                 else:
                     quotes[quote_num-1] = new
                 data[serverID]['quotes'] = quotes
-                with open('data/serverData.json', 'w') as f:  # Update JSON
-                    json.dump(data, f, indent=2)
+                self.writeJSON('data/serverData.json')
                 s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
                 await self.bot.say('Success!')
                 return
@@ -450,7 +448,7 @@ class Quotes:
         # Prompt user and get response
         TIMEOUT = 10
         blank_quote = quote.replace(word, start + '`_____`' + end)
-        await self.bot.say(f'**Respond with the missing word in {TIMEOUT} seconds!**\n{blank_quote}')
+        await self.bot.say(f'**Respond with the missing word in {TIMEOUT} seconds!** ({ctx.message.author.mention})\n{blank_quote}')
         answer = await self.bot.wait_for_message(timeout=TIMEOUT, author=ctx.message.author)
         filled = blank_quote.replace('`_____`', '`'+cleanWord+'`')
         msg = ''
@@ -496,8 +494,7 @@ class Quotes:
         msg += f'\nWins: {wins} Losses: {losses} (**{round(wins/(wins+losses)*100)}%**)'
         await self.bot.say(msg)
 
-        with open('data/serverData.json', 'w') as f:  # Update JSON
-            json.dump(data, f, indent=2)
+        self.writeJSON('data/serverData.json')
         s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
 
     @commands.command(pass_context=True)
@@ -571,6 +568,10 @@ class Quotes:
         with open(filename, 'r') as f:
             data = json.load(f)
         return data
+
+    def writeJSON(self, filename):
+        with open('data/serverData.json', 'w') as f:  # Update JSON
+            json.dump(self.cacheJSON, f, indent=2)
 
 def setup(bot):
     bot.add_cog(Quotes(bot))
