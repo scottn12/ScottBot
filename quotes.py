@@ -4,12 +4,13 @@ import json
 import random
 import time
 import re
-import sqlite3
 
 class Quotes:
     '''Commands for quotes.'''
     def __init__(self, bot):
         self.bot = bot
+        self.cacheJSON = None
+
 
     @commands.command(pass_context=True)
     async def addQuote(self, ctx):
@@ -27,9 +28,7 @@ class Quotes:
             await self.bot.say('Error! You cannot mention someone in a quote.')
             return
 
-        # Update JSON
-        with open('data/serverData.json', 'r') as f:
-            data = json.load(f)
+        data = self.fetchJSON('data/serverData.json')
 
         serverID = ctx.message.server.id
         if serverID in data:  # Check if server is registered yet
@@ -62,8 +61,8 @@ class Quotes:
 
     @commands.command(pass_context=True)
     async def quote(self, ctx):
-        with open('data/serverData.json', 'r') as f:
-            data = json.load(f)
+        """Display the quote at the given index."""
+        data = self.fetchJSON('data/serverData.json')
         serverID = ctx.message.server.id
         if serverID in data and 'quotes' in data[serverID] and data[serverID]['quotes']:  # Check if server/quotes are registered
             quotes = data[serverID]['quotes']
@@ -95,8 +94,7 @@ class Quotes:
     async def randomQuote(self, ctx):
         """ScottBot says a random quote."""
         MAX_QUOTES = 5
-        with open('data/serverData.json', 'r') as f:
-            data = json.load(f)
+        data = self.fetchJSON('data/serverData.json')
 
         serverID = ctx.message.server.id
         if serverID in data and 'quotes' in data[serverID] and data[serverID]['quotes']:  # Check if server/quotes are registered
@@ -131,8 +129,7 @@ class Quotes:
     async def allQuotes(self, ctx):
         """Displays all registered quotes."""
         # Setup
-        with open('data/serverData.json', 'r') as f:
-            data = json.load(f)
+        data = self.fetchJSON('data/serverData.json')
         serverID = ctx.message.server.id
         if serverID in data and 'quotes' in data[serverID] and data[serverID]['quotes']:  # Check if server/quotes are registered
             quotes = data[serverID]['quotes']
@@ -211,8 +208,7 @@ class Quotes:
     @commands.command(pass_context=True)
     async def changeQuote(self, ctx):
         """Change or delete a quote !changeQuote quoteNumber newQuote"""
-        with open('data/serverData.json', 'r') as f:
-            data = json.load(f)
+        data = self.fetchJSON('data/serverData.json')
         serverID = ctx.message.server.id
         if serverID in data and 'quotes' in data[serverID] and data[serverID]['quotes']:  # Check if server/quotes are registered
             quotes = data[serverID]['quotes']
@@ -292,8 +288,7 @@ class Quotes:
     @commands.command(pass_context=True)
     async def searchQuote(self, ctx):
         """Search for quotes."""
-        with open('data/serverData.json', 'r') as f:
-            data = json.load(f)
+        data = self.fetchJSON('data/serverData.json')
         serverID = ctx.message.server.id
         if serverID in data and 'quotes' in data[serverID] and data[serverID]['quotes']:  # Check if server/quotes are registered
             quotes = data[serverID]['quotes']
@@ -318,6 +313,8 @@ class Quotes:
         total_results = 0
         total_len = 0
         for quote in quotes:
+            if not quote:
+                continue
             matches = 0
             for keyword in keywords:
                 if keyword.lower() in quote.lower():
@@ -408,8 +405,7 @@ class Quotes:
     @commands.command(pass_context=True)
     async def matchQuote(self, ctx):
         """Guess the missing word from the quote provided."""
-        with open('data/serverData.json', 'r') as f:
-            data = json.load(f)
+        data = self.fetchJSON('data/serverData.json')
         serverID = ctx.message.server.id
         if serverID in data and 'quotes' in data[serverID] and data[serverID]['quotes']:  # Check if server/quotes are registered
             quotes = data[serverID]['quotes'].copy()
@@ -512,8 +508,7 @@ class Quotes:
     @commands.command(pass_context=True)
     async def quoteScoreboard(self, ctx):
         """Displays the quote scoreboard."""
-        with open('data/serverData.json', 'r') as f:
-            data = json.load(f)
+        data = self.fetchJSON('data/serverData.json')
         serverID = ctx.message.server.id
         if serverID in data and 'quoteScores' in data[serverID] and data[serverID]['quoteScores']:  # Check if scores are registered
             scores = data[serverID]['quoteScores']
@@ -533,12 +528,23 @@ class Quotes:
                 sortedIDs.append(score)
                 continue
             for i in range(len(winRates)):
-                if i == len(winRates) - 1 and winRate <= winRates[i]:
-                    winRates.append(winRate)
-                    sortedIDs.append(score)
-                if winRate > winRates[i]:
+                iWinRate = winRates[i]
+                iWins = scores[sortedIDs[i]]['wins']
+                iLosses = scores[sortedIDs[i]]['losses']
+                if winRate > iWinRate:
                     winRates.insert(i, winRate)
                     sortedIDs.insert(i, score)
+                elif winRate == iWinRate:  # WinRate Tie
+                    if wins > iWins:
+                        winRates.insert(i, winRate)
+                        sortedIDs.insert(i, score)
+                        continue
+                    if losses < iLosses:
+                        winRates.insert(i, winRate)
+                        sortedIDs.insert(i, score)
+                elif i == len(winRates) - 1:
+                    winRates.append(winRate)
+                    sortedIDs.append(score)
 
         # Display
         msg = '```Player: \t\t\t\t\tWin Rate:\tWins:\tLosses:\n'
@@ -558,6 +564,13 @@ class Quotes:
         """Alias for !quoteScoreboard."""
         await self.quoteScoreboard.invoke(ctx)
 
+    # Fetch currently cached JSON or load in if not cached
+    def fetchJSON(self, filename):
+        if self.cacheJSON:
+            return self.cacheJSON
+        with open(filename, 'r') as f:
+            data = json.load(f)
+        return data
 
 def setup(bot):
     bot.add_cog(Quotes(bot))
