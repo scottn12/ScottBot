@@ -9,7 +9,7 @@ import time
 import asyncio
 
 PREFIX = '!'
-VERSION = '2.6.4'
+VERSION = '2.6.5'
 
 # S3 Setup
 ACCESS_KEY_ID = os.environ.get('ACCESS_KEY_ID', None)

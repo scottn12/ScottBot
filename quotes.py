@@ -3,6 +3,7 @@ from bot import BUCKET_NAME, s3
 import json
 import random
 import time
+import string
 
 class Quotes:
     '''Commands for quotes.'''
@@ -101,7 +102,7 @@ class Quotes:
         if serverID in data and 'quotes' in data[serverID] and data[serverID]['quotes']:  # Check if server/quotes are registered
             quotes = data[serverID]['quotes']
         else:
-            await self.bot.say('Error! No quotes found! Use !addQuote to add quotes.')
+            await self.bot.say('Error! No quotes found! Use `!addQuote` to add quotes.')
             return
 
         # Check if int was passed & num of quotes is not greater than max allowed
@@ -403,6 +404,44 @@ class Quotes:
     async def sq(self, ctx):
         """Alias for !searchQuote."""
         await self.searchQuote.invoke(ctx)
+
+    @commands.command(pass_context=True)
+    async def fillTheQuote(self, ctx):
+        """Guess the missing word from the quote provided."""
+        with open('data/serverData.json', 'r') as f:
+            data = json.load(f)
+        serverID = ctx.message.server.id
+        if serverID in data and 'quotes' in data[serverID] and data[serverID]['quotes']:  # Check if server/quotes are registered
+            quotes = data[serverID]['quotes']
+        else:
+            await self.bot.say('Error! No quotes registered yet! Use `!addQuote` to add quotes.')
+            return
+
+        # Select Quote
+        while True:
+            quote = quotes[random.randint(0, len(quotes) - 1)]
+            if quote and len(quote.split()) > 1:
+                break
+
+        # Select quote
+        while True:
+            quote = quotes[random.randint(0, len(quotes) - 1)]
+            if quote and len(quote.split()) > 1:  # Must contain at least 2 words
+                # Select word to hide
+                while True:
+                    words = quote.split()
+                    word = words[random.randint(0, len(words) - 1)].strip(string.punctuation)
+                    if len(word) >= 4:  # Must be at least 4 characters
+                        break
+                break
+
+        await self.bot.say(quote + '\n' + quote.replace(word, '`_____`'))
+
+    @commands.command(pass_context=True)
+    async def fq(self, ctx):
+        """Alias for !searchQuote."""
+        for i in range(10):
+            await self.fillTheQuote.invoke(ctx)
 
 def setup(bot):
     bot.add_cog(Quotes(bot))
