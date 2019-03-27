@@ -566,8 +566,8 @@ class Quotes:
         if self.cacheJSON:
             return self.cacheJSON
         with open(filename, 'r') as f:
-            data = json.load(f)
-        return data
+            self.cacheJSON = json.load(f)
+        return self.cacheJSON
 
     def writeJSON(self, filename):
         with open('data/serverData.json', 'w') as f:  # Update JSON
