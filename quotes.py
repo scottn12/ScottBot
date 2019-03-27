@@ -75,7 +75,11 @@ class Quotes:
         if index > len(quotes) or index <= 0:
             await self.bot.say('Error! That quote does not exist! Use `!allQuotes` to see the full list of quotes.')
             return
-        await self.bot.say(quotes[index-1])
+
+        if not quotes[index-1]:
+            await self.bot.say('Error! That quote has been deleted.')
+        else:
+            await self.bot.say(quotes[index-1])
 
     @commands.command(pass_context=True)
     async def q(self, ctx):
@@ -105,9 +109,13 @@ class Quotes:
             await self.bot.say('**Up to ' + str(MAX_QUOTES) + ' quotes are allowed at once.**')
             arg = MAX_QUOTES
 
+        content = ''
         for _ in range(arg):
             rng = random.randint(0, len(quotes) - 1)
-            await self.bot.say(quotes[rng])
+            while not quotes[rng]:
+                rng = random.randint(0, len(quotes) - 1)
+            content += f'{quotes[rng]} `{str(rng+1):3s}`\n'
+        await self.bot.say(content)
 
     @commands.command(pass_context=True)
     async def rq(self, ctx):
@@ -142,6 +150,8 @@ class Quotes:
         # Multiple pages needed
         content = f'**Active for {TIMEOUT//60} minutes.**\n```'
         for i in range(MAX):
+            if not quotes[i]:  # Don't add deleted quotes
+                continue
             content += f'{str(i+1):3s} {quotes[i]}\n'
         content += '```'
         msg = await self.bot.say(content)
@@ -167,6 +177,8 @@ class Quotes:
                 page -= 1
                 content = f'**Active for {TIMEOUT//60} minutes.**\n```'
                 for i in range(page * MAX, page * MAX + MAX):
+                    if not quotes[i]:  # Don't add deleted quotes
+                        continue
                     content += f'{str(i+1):3s} {quotes[i]}\n'
                 content += '```'
                 await self.bot.edit_message(msg, new_content=content)
@@ -182,7 +194,9 @@ class Quotes:
                     end_i = page * MAX + MAX
                 content = f'**Active for {TIMEOUT//60} minutes.**\n```'
                 for i in range(page * MAX, end_i):
-                    content += f'{str(i+1):3s} {quotes[i]}\n'
+                    if not quotes[i]:  # Don't add deleted quotes
+                        continue
+                    content += f'{str(i + 1):3s} {quotes[i]}\n'
                 content += '```'
                 await self.bot.edit_message(msg, new_content=content)
         content = content.replace(f'Active for {TIMEOUT//60} minutes.', 'NO LONGER ACTIVE')
@@ -229,6 +243,10 @@ class Quotes:
             await self.bot.say('Error! That quote does not exist! Use `!allQuotes` to see the full list of quotes.')
             return
 
+        if not new and not quotes[quote_num-1]:
+            await self.bot.say(f'Error! That quote is already deleted. Use `!changeQuote {quote_num} "new quote"` to change this quote.')
+            return
+
         # Ask user to confirm and perform change
         thumbs = ['👍', '👎']
         if not new:
@@ -248,7 +266,7 @@ class Quotes:
             e = reaction.reaction.emoji
             if e == '👍':
                 if not new:
-                    quotes.remove(quotes[quote_num-1])
+                    quotes[quote_num-1] = None
                 else:
                     quotes[quote_num-1] = new
                 data[serverID]['quotes'] = quotes
@@ -378,7 +396,6 @@ class Quotes:
                 await self.bot.edit_message(msg, new_content=pages[page])
         content = pages[page] + '**NO LONGER ACTIVE**'
         await self.bot.edit_message(msg, new_content=content)
-
 
     @commands.command(pass_context=True)
     async def sq(self, ctx):
