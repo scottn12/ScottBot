@@ -460,7 +460,7 @@ class Quotes:
             msg += '**Wrong, you lose!**'
         else:
             msg += '**Time\'s up, you lose!**'
-        msg += f'\n{filled}'
+        msg += f'\n{filled} `{quotes.index(quote)+1}`'
 
         # Update score
         wins = 0
@@ -531,15 +531,13 @@ class Quotes:
                 if winRate > iWinRate:
                     winRates.insert(i, winRate)
                     sortedIDs.insert(i, score)
-                elif winRate == iWinRate:  # WinRate Tie
+                    continue
+                if winRate == iWinRate:  # WinRate Tie
                     if wins > iWins:
                         winRates.insert(i, winRate)
                         sortedIDs.insert(i, score)
                         continue
-                    if losses < iLosses:
-                        winRates.insert(i, winRate)
-                        sortedIDs.insert(i, score)
-                elif i == len(winRates) - 1:
+                if i == len(winRates) - 1:
                     winRates.append(winRate)
                     sortedIDs.append(score)
 
