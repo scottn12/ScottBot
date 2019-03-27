@@ -3,7 +3,7 @@ from bot import BUCKET_NAME, s3
 import json
 import random
 import time
-import string
+import re
 
 class Quotes:
     '''Commands for quotes.'''
@@ -31,7 +31,6 @@ class Quotes:
             data = json.load(f)
 
         serverID = ctx.message.server.id
-
         if serverID in data:  # Check if server is registered yet
             if 'quotes' in data[serverID]:  # Check if quotes are registered yet
                 quotes = data[serverID]['quotes']
@@ -417,30 +416,38 @@ class Quotes:
             await self.bot.say('Error! No quotes registered yet! Use `!addQuote` to add quotes.')
             return
 
-        # Select Quote
-        while True:
+        # Find quote that works until you run out of quotes
+        while quotes:
             quote = quotes[random.randint(0, len(quotes) - 1)]
-            if quote and len(quote.split()) > 1:
+            if not quote or len(quote.split()) < 2:  # Deleted quote or only one word
+                quotes.remove(quote)
+                continue
+            quote = re.sub('(?<!_)_(?!_)', '*', quote)  # Replace single '_' with '*'
+            # Find eligible words to hide
+            eligible = []
+            words = quote.split()
+            for word in words:
+                word = word.strip('!“”"#$%&\'()+,-./:;<=>?@[\\]^{|}')  # Remove all non-markdown punctuation
+                cleanWord = word.strip('*_~`')  # Remove all markdown punctuation
+                if len(cleanWord) >= 4 and quote.count(cleanWord) == 1:  # Must be at least 4 characters and occur once
+                    eligible.append((word,cleanWord))
+            if len(eligible) > 0:  # At least one eligible word found
                 break
+        word, cleanWord = eligible[random.randint(0, len(eligible) - 1)]
 
-        # Select quote
-        while True:
-            quote = quotes[random.randint(0, len(quotes) - 1)]
-            if quote and len(quote.split()) > 1:  # Must contain at least 2 words
-                # Select word to hide
-                while True:
-                    words = quote.split()
-                    word = words[random.randint(0, len(words) - 1)].strip(string.punctuation)
-                    if len(word) >= 4:  # Must be at least 4 characters
-                        break
-                break
+        # Deal with discord markdown characters
+        start = ''
+        end = ''
+        if word != cleanWord:
+            start = word[:word.index(cleanWord[0])]
+            end = word[len(cleanWord) + len(start):]
 
-        await self.bot.say(quote + '\n' + quote.replace(word, '`_____`'))
+        await self.bot.say(quote + '\n' + quote.replace(word, start + '`_____`' + end))
 
     @commands.command(pass_context=True)
-    async def fq(self, ctx):
+    async def ftq(self, ctx):
         """Alias for !searchQuote."""
-        for i in range(10):
+        for i in range(5):
             await self.fillTheQuote.invoke(ctx)
 
 def setup(bot):

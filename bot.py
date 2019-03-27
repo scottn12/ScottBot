@@ -35,7 +35,7 @@ async def on_ready():
     s3.download_file(BUCKET_NAME, 'requests.txt', 'data/requests.txt')
 
     await bot.change_presence(game=discord.Game(name='Overcooked'))
-    print(bot.user.name + ' Version: ' + VERSION + " is ready!")
+    print(bot.user.name + ' Version ' + VERSION + " is ready!")
 
 # Stream Ping
 @bot.event
