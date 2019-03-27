@@ -4,6 +4,7 @@ import json
 import random
 import time
 import re
+import sqlite3
 
 class Quotes:
     '''Commands for quotes.'''
@@ -405,35 +406,43 @@ class Quotes:
         await self.searchQuote.invoke(ctx)
 
     @commands.command(pass_context=True)
-    async def fillTheQuote(self, ctx):
+    async def matchQuote(self, ctx):
         """Guess the missing word from the quote provided."""
         with open('data/serverData.json', 'r') as f:
             data = json.load(f)
         serverID = ctx.message.server.id
         if serverID in data and 'quotes' in data[serverID] and data[serverID]['quotes']:  # Check if server/quotes are registered
-            quotes = data[serverID]['quotes']
+            quotes = data[serverID]['quotes'].copy()
         else:
             await self.bot.say('Error! No quotes registered yet! Use `!addQuote` to add quotes.')
             return
 
-        # Find quote that works until you run out of quotes
+        # Try to find quote that works until you run out of quotes
+        eligible = []
+        quote = ''
         while quotes:
             quote = quotes[random.randint(0, len(quotes) - 1)]
             if not quote or len(quote.split()) < 2:  # Deleted quote or only one word
                 quotes.remove(quote)
                 continue
-            quote = re.sub('(?<!_)_(?!_)', '*', quote)  # Replace single '_' with '*'
+            newQuote = re.sub('(?<!_)_(?!_)', '*', quote)  # Replace single '_' with '*'
             # Find eligible words to hide
-            eligible = []
-            words = quote.split()
+            eligible = []  # Reset list for new quote
+            words = newQuote.split()
             for word in words:
                 word = word.strip('!“”"#$%&\'()+,-./:;<=>?@[\\]^{|}')  # Remove all non-markdown punctuation
                 cleanWord = word.strip('*_~`')  # Remove all markdown punctuation
-                if len(cleanWord) >= 4 and quote.count(cleanWord) == 1:  # Must be at least 4 characters and occur once
+                if len(cleanWord) >= 4 and newQuote.count(cleanWord) == 1:  # Must be at least 4 characters and occur once
                     eligible.append((word,cleanWord))
-            if len(eligible) > 0:  # At least one eligible word found
+            if eligible:  # Eligible quote found
                 break
-        word, cleanWord = eligible[random.randint(0, len(eligible) - 1)]
+            else:  # Don't try this quote again
+                quotes.remove(quote)
+        if eligible:
+            word, cleanWord = eligible[random.randint(0, len(eligible) - 1)]
+        else:  # No eligible quotes found
+            await self.bot.say('Error! No eligible quotes found. Use `!addQuote` to add quotes.')
+            return
 
         # Deal with discord markdown characters
         start = ''
@@ -442,13 +451,113 @@ class Quotes:
             start = word[:word.index(cleanWord[0])]
             end = word[len(cleanWord) + len(start):]
 
-        await self.bot.say(quote + '\n' + quote.replace(word, start + '`_____`' + end))
+        # Prompt user and get response
+        TIMEOUT = 10
+        blank_quote = quote.replace(word, start + '`_____`' + end)
+        await self.bot.say(f'**Respond with the missing word in {TIMEOUT} seconds!**\n{blank_quote}')
+        answer = await self.bot.wait_for_message(timeout=TIMEOUT, author=ctx.message.author)
+        filled = blank_quote.replace('`_____`', '`'+cleanWord+'`')
+        msg = ''
+        win = False
+        if answer and answer.content.lower() == cleanWord.lower():
+            msg += '**Correct, you win!**'
+            win = True
+        elif answer:
+            msg += '**Wrong, you lose!**'
+        else:
+            msg += '**Time\'s up, you lose!**'
+        msg += f'\n{filled}'
+
+        # Update score
+        wins = 0
+        losses = 1
+        if win:
+            wins = 1
+            losses = 0
+        userID = ctx.message.author.id
+        if 'quoteScores' in data[serverID]:  # Check if quoteScores are registered yet
+            scores = data[serverID]['quoteScores']
+            if userID in scores:  # User already registered
+                if win:
+                    scores[userID]['wins'] += 1
+                else:
+                    scores[userID]['losses'] += 1
+                wins = scores[userID]['wins']
+                losses = scores[userID]['losses']
+            else:
+                scores[userID] = {
+                    "wins": wins,
+                    "losses": losses
+                }
+        else:  # add quoteScores field
+            data[serverID]['quoteScores'] = {
+                userID: {
+                    "wins": wins,
+                    "losses": losses
+                }
+            }
+        winRate = round(wins/(wins+losses)*100)
+        msg += f'\nWins: {wins} Losses: {losses} (**{round(wins/(wins+losses)*100)}%**)'
+        await self.bot.say(msg)
+
+        with open('data/serverData.json', 'w') as f:  # Update JSON
+            json.dump(data, f, indent=2)
+        s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
 
     @commands.command(pass_context=True)
-    async def ftq(self, ctx):
-        """Alias for !searchQuote."""
-        for i in range(5):
-            await self.fillTheQuote.invoke(ctx)
+    async def mq(self, ctx):
+        """Alias for !matchQuote."""
+        await self.matchQuote.invoke(ctx)
+
+    @commands.command(pass_context=True)
+    async def quoteScoreboard(self, ctx):
+        """Displays the quote scoreboard."""
+        with open('data/serverData.json', 'r') as f:
+            data = json.load(f)
+        serverID = ctx.message.server.id
+        if serverID in data and 'quoteScores' in data[serverID] and data[serverID]['quoteScores']:  # Check if scores are registered
+            scores = data[serverID]['quoteScores']
+        else:
+            await self.bot.say('Error! No scores recorded yet! Use `!matchQuote` to play.')
+            return
+
+        # Sort scores
+        sortedIDs = []
+        winRates = []
+        for score in scores.keys():
+            wins = scores[score]['wins']
+            losses = scores[score]['losses']
+            winRate = round(wins/(wins+losses)*100)
+            if not winRates:
+                winRates.append(winRate)
+                sortedIDs.append(score)
+                continue
+            for i in range(len(winRates)):
+                if i == len(winRates) - 1 and winRate <= winRates[i]:
+                    winRates.append(winRate)
+                    sortedIDs.append(score)
+                if winRate > winRates[i]:
+                    winRates.insert(i, winRate)
+                    sortedIDs.insert(i, score)
+
+        # Display
+        msg = '```Player: \t\t\t\t\tWin Rate:\tWins:\tLosses:\n'
+        for score in sortedIDs:
+            name = await self.bot.get_user_info(score)
+            wins = scores[score]['wins']
+            losses = scores[score]['losses']
+            msg += f'{str(name):24s}\t'
+            msg += f'{str(round(wins/(wins+losses)*100)) + "%":5s}\t\t'
+            msg += f'{str(wins):5s}\t'
+            msg += f'{str(losses):5s}\n'
+        msg += '```'
+        await self.bot.say(msg)
+
+    @commands.command(pass_context=True)
+    async def qs(self, ctx):
+        """Alias for !quoteScoreboard."""
+        await self.quoteScoreboard.invoke(ctx)
+
 
 def setup(bot):
     bot.add_cog(Quotes(bot))

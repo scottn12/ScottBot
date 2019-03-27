@@ -10,17 +10,16 @@ class Flake:
     @commands.command(pass_context=True)
     async def flakeReset(self, ctx):
         '''Resets the flakeRank (ADMIN).'''
-        if (not await self.isAdmin(ctx)):
+        if not await self.isAdmin(ctx):
             await self.bot.say('Only admins may use !flakeReset.')
             return
 
         await self.bot.say("Are you sure you want to permanently reset the flakeRank? Type 'Y' to confirm.")
-        if (not await self.confirmAction(ctx)):
+        if not await self.confirmAction(ctx):
             await self.bot.say('Reset aborted.')
             return
 
         # Reset
-        import sqlite3
         conn = sqlite3.connect('data/bot_database.db')
         c = conn.cursor()
         c.execute('DROP TABLE IF EXISTS flake' + ctx.message.server.id)
@@ -89,9 +88,6 @@ def flakeRead(serverID):
     for row in rows:
         ids.append(row[0])
         counts.append(row[1])
-
-        #IDs += '{:<15}\t\t\t'.format(str(row[0]))
-        #rtn += str(row[1]) + '\n'
     c.close()
     conn.close()
     return (ids, counts)
