@@ -33,7 +33,11 @@ class Quotes:
 
         if serverID in data:  # Check if server is registered yet
             if 'quotes' in data[serverID]:  # Check if quotes are registered yet
-                data[serverID]['quotes'].append(quote)
+                quotes = data[serverID]['quotes']
+                if quote in quotes:
+                    await self.bot.say(f'Error! Quote already registered (`{quotes.index(quote)+1}`).')
+                    return
+                quotes.append(quote)
                 total = len(data[serverID]['quotes'])
             else:  # add quote field
                 data[serverID]['quotes'] = [quote]
@@ -162,10 +166,6 @@ class Quotes:
         start = time.time()
         end = start + TIMEOUT
         while time.time() < end:
-            if page * MAX + MAX-1 >= total:
-                on_page = total % MAX
-            else:
-                on_page = MAX
             reaction = await self.bot.wait_for_reaction(react, message=msg, timeout=int(end - time.time()))
             if not reaction or reaction.user == self.bot.user:
                 continue
@@ -265,7 +265,9 @@ class Quotes:
                 continue
             e = reaction.reaction.emoji
             if e == '👍':
-                if not new:
+                if not new and quote_num == len(quotes):  # Remove last quote from the list since it won't disturb any existing quotes
+                    quotes.remove(quotes[quote_num-1])
+                elif not new:
                     quotes[quote_num-1] = None
                 else:
                     quotes[quote_num-1] = new
