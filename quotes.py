@@ -527,16 +527,15 @@ class Quotes:
             for i in range(len(winRates)):
                 iWinRate = winRates[i]
                 iWins = scores[sortedIDs[i]]['wins']
-                iLosses = scores[sortedIDs[i]]['losses']
                 if winRate > iWinRate:
                     winRates.insert(i, winRate)
                     sortedIDs.insert(i, score)
-                    continue
+                    break
                 if winRate == iWinRate:  # WinRate Tie
                     if wins > iWins:
                         winRates.insert(i, winRate)
                         sortedIDs.insert(i, score)
-                        continue
+                        break
                 if i == len(winRates) - 1:
                     winRates.append(winRate)
                     sortedIDs.append(score)
@@ -568,7 +567,7 @@ class Quotes:
         return self.cacheJSON
 
     def writeJSON(self, filename):
-        with open('data/serverData.json', 'w') as f:  # Update JSON
+        with open(filename, 'w') as f:  # Update JSON
             json.dump(self.cacheJSON, f, indent=2)
 
 def setup(bot):
