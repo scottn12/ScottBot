@@ -11,7 +11,6 @@ class Quotes:
         self.bot = bot
         self.cacheJSON = None
 
-
     @commands.command(pass_context=True)
     async def addQuote(self, ctx):
         '''Adds a quote to the list of quotes.'''
@@ -414,8 +413,11 @@ class Quotes:
         # Try to find quote that works until you run out of quotes
         eligible = []
         quote = ''
+        newQuote = ''
+        rng = -1
         while quotes:
-            quote = quotes[random.randint(0, len(quotes) - 1)]
+            rng = random.randint(0, len(quotes) - 1)
+            quote = quotes[rng]
             if not quote or len(quote.split()) < 2:  # Deleted quote or only one word
                 quotes.remove(quote)
                 continue
@@ -447,7 +449,7 @@ class Quotes:
 
         # Prompt user and get response
         TIMEOUT = 10
-        blank_quote = quote.replace(word, start + '`_____`' + end)
+        blank_quote = newQuote.replace(word, start + '`_____`' + end)
         await self.bot.say(f'**Respond with the missing word in {TIMEOUT} seconds!** ({ctx.message.author.mention})\n{blank_quote}')
         answer = await self.bot.wait_for_message(timeout=TIMEOUT, author=ctx.message.author)
         filled = blank_quote.replace('`_____`', '`'+cleanWord+'`')
@@ -460,7 +462,7 @@ class Quotes:
             msg += '**Wrong, you lose!**'
         else:
             msg += '**Time\'s up, you lose!**'
-        msg += f'\n{filled} `{quotes.index(quote)+1}`'
+        msg += f'\n{filled} `{rng+1}`'
 
         # Update score
         wins = 0
