@@ -1,3 +1,7 @@
+# ScottBot by github.com/scottn12
+# quotes.py
+# Contains all commands related to ScottBot's flake recording functionality.
+
 from discord.ext import commands
 import sqlite3
 from bot import BUCKET_NAME, s3
@@ -10,10 +14,6 @@ class Flake:
     @commands.command(pass_context=True)
     async def flakeReset(self, ctx):
         '''Resets the flakeRank (ADMIN).'''
-        if not await self.isAdmin(ctx):
-            await self.bot.say('Only admins may use !flakeReset.')
-            return
-
         await self.bot.say("Are you sure you want to permanently reset the flakeRank? Type 'Y' to confirm.")
         if not await self.confirmAction(ctx):
             await self.bot.say('Reset aborted.')
@@ -36,7 +36,7 @@ class Flake:
         flakers = ctx.message.mentions
         for flaker in flakers:
             count = flakeIncrement(flaker.id, serverID)
-            await self.bot.say(str(flaker) + ' has now flaked ' + count + ' times!')
+            await self.bot.say(str(flaker.name) + ' has now flaked ' + count + ' times!')
 
     @commands.command(pass_context=True)
     async def flakeRank(self, ctx):
@@ -46,13 +46,20 @@ class Flake:
         except:
             await self.bot.say('There are no flakers!')
             return
-        msg = '```Flaker: \t\t\t\t\tCount:\n'
+        msg = f'```{"Flaker:":15s}\tCount:\n'
         for i in range(len(ids)):
-            name = await self.bot.get_user_info(ids[i])
-            msg += f'{str(name):24s}\t'
+            user = await self.bot.get_user_info(ids[i])
+            msg += f'{str(user.name):15s}\t'
             msg += f'{counts[i]}\n'
         msg += '```'
         await self.bot.say(msg)
+
+    # Prompts the user to confirm an action and returns true/false
+    async def confirmAction(self, ctx):
+        msg = await self.bot.wait_for_message(timeout=10, author=ctx.message.author)
+        if not msg or msg.content.lower() != 'y':
+            return False
+        return True
 
 # Setup Database
 def createTable(name):

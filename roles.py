@@ -1,3 +1,7 @@
+# ScottBot by github.com/scottn12
+# quotes.py
+# Contains all role management commands.
+
 import discord
 from discord.ext import commands
 from discord.utils import get
@@ -9,18 +13,16 @@ class Roles:
     """Commands for role management."""
     def __init__(self, bot):
         self.bot = bot
+        with open('data/roles.json', 'r') as f:
+            self.cacheJSON = json.load(f)
 
     @commands.command(pass_context=True)
+    @commands.has_permissions(administrator=True)
     async def manageRoles(self, ctx):
-        '''Enable/Disable role(s) to be used with !roles (ADMIN).'''
-        if not await self.isAdmin(ctx):  # Check Admin
-            await self.bot.say('Only admins may use !allowRoles.')
-            return
-
+        """Enable/Disable role(s) to be used with !roles (ADMIN)."""
         # Get allowed roles (JSON)
         serverID = ctx.message.server.id
-        with open('data/serverData.json', 'r') as f:
-            data = json.load(f)
+        data = self.cacheJSON
         if serverID in data:
             if 'allowedRoles' in data[serverID]:
                 allowed_roles = data[serverID]['allowedRoles']
@@ -77,9 +79,7 @@ class Roles:
                     await self.bot.edit_message(msg, new_content=content)
                 # Update
                 data[serverID]['allowedRoles'] = allowed_roles
-                with open('data/serverData.json', 'w') as f:
-                    json.dump(data, f, indent=2)
-                s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
+                self.writeJSON()
             content = content.replace(f'Active for {TIMEOUT} seconds', 'NO LONGER ACTIVE')
             await self.bot.edit_message(msg, new_content=content)
             return
@@ -161,9 +161,7 @@ class Roles:
                 await self.bot.edit_message(msg, new_content=content)
             # Update
             data[serverID]['allowedRoles'] = allowed_roles
-            with open('data/serverData.json', 'w') as f:
-                json.dump(data, f, indent=2)
-            s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
+            self.writeJSON()
         content = content.replace(f'Active for {TIMEOUT} seconds', 'NO LONGER ACTIVE')
         await self.bot.edit_message(msg, new_content=content)
 
@@ -173,12 +171,10 @@ class Roles:
         await self.manageRoles.invoke(ctx)
 
     @commands.command(pass_context=True)
+    @commands.has_permissions(administrator=True)
+    @commands.bot_has_permissions(manage_roles=True)
     async def addRole(self, ctx, arg=None):
         '''Creats mentionable role with given name (ADMIN).'''
-        if not await self.isAdmin(ctx):  # Check Admin
-            await self.bot.say('Only admins may use !allowRoles.')
-            return
-
         for r in ctx.message.server.roles:
             if r.name == arg:
                 await self.bot.say(f'Error! Role `{arg}` already exists!')
@@ -192,6 +188,7 @@ class Roles:
         await self.bot.say(f'Role `{arg}` was successfully created!')
 
     @commands.command(pass_context=True)
+    @commands.bot_has_permissions(manage_roles=True)
     async def role(self, ctx):
         '''Join/leave a role using !role @role/"role"'''
         if len(ctx.message.content) < 7:
@@ -207,9 +204,7 @@ class Roles:
         serverID = ctx.message.server.id
 
         # Get allowed roles (JSON)
-        with open('data/serverData.json', 'r') as f:
-            data = json.load(f)
-
+        data = self.cacheJSON
         if serverID in data and 'allowedRoles' in data[serverID] and data[serverID]['allowedRoles']:  # Check if server is registered / role data exists / role data not empty
             allowedRoles = data[serverID]['allowedRoles']
         else:  # No server/role data registered yet
@@ -259,12 +254,12 @@ class Roles:
                 await self.bot.say('Error! Role: "' + role + '" not found!')
 
     @commands.command(pass_context=True)
+    @commands.bot_has_permissions(manage_roles=True)
     async def roles(self, ctx):
         '''Shows roles available to join/leave.'''
         # Get allowed roles (JSON)
         serverID = ctx.message.server.id
-        with open('data/serverData.json', 'r') as f:
-            data = json.load(f)
+        data = self.cacheJSON
         if serverID in data and 'allowedRoles' in data[serverID] and data[serverID]['allowedRoles']:  # Check if server is registered / role data exists / role data not empty
             allowedRoles = data[serverID]['allowedRoles']
         else:  # No server/role data registered yet
@@ -276,9 +271,7 @@ class Roles:
             if not role:  # Role has been removed since last use
                 allowedRoles.remove(id)
                 data[serverID]['allowedRoles'] = allowedRoles
-                with open('data/serverData.json', 'w') as f:
-                    json.dump(data, f, indent=2)
-                s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
+                self.writeJSON()
 
         user = ctx.message.author
         user_roles = user.roles
@@ -310,12 +303,12 @@ class Roles:
                 role = get(ctx.message.server.roles, id=allowedRoles[react.index(e)])
                 if role in user.roles:
                     await self.bot.remove_roles(user, role)
-                    await self.bot.say(f'{user} has left `{role}`!')
+                    await self.bot.say(f'{user.name} has left `{role}`!')
                     content = content.replace(f'Leave `{role}`', f'Join `{role}`')
                     await self.bot.edit_message(msg, new_content=content)
                 else:
                     await self.bot.add_roles(user, role)
-                    await self.bot.say(f'{user} has joined `{role}`!')
+                    await self.bot.say(f'{user.name} has joined `{role}`!')
                     content = content.replace(f'Join `{role}`', f'Leave `{role}`')
                     await self.bot.edit_message(msg, new_content=content)
             content = content.replace(f'Active for {TIMEOUT} seconds', 'NO LONGER ACTIVE')
@@ -395,12 +388,12 @@ class Roles:
             role = get(ctx.message.server.roles, id=allowedRoles[react.index(e) + page * 9])
             if role in user.roles:
                 await self.bot.remove_roles(user, role)
-                await self.bot.say(f'{user} has left `{role}`!')
+                await self.bot.say(f'{user.name} has left `{role}`!')
                 content = content.replace(f'Leave `{role}`', f'Join `{role}`')
                 await self.bot.edit_message(msg, new_content=content)
             else:
                 await self.bot.add_roles(user, role)
-                await self.bot.say(f'{user} has joined `{role}`!')
+                await self.bot.say(f'{user.name} has joined `{role}`!')
                 content = content.replace(f'Join `{role}`', f'Leave `{role}`')
                 await self.bot.edit_message(msg, new_content=content)
         content = content.replace(f'Active for {TIMEOUT} seconds', 'NO LONGER ACTIVE')
@@ -424,12 +417,11 @@ class Roles:
         content += '```'
         await self.bot.say(content)
 
-    async def isAdmin(self, ctx):
-        user = ctx.message.author
-        permissions = user.permissions_in(ctx.message.channel)
-        if not permissions.administrator:
-            return False
-        return True
+    # Update file with cached JSON and upload to AWS
+    def writeJSON(self):
+        with open('data/roles.json', 'w') as f:  # Update JSON
+            json.dump(self.cacheJSON, f, indent=2)
+        s3.upload_file('data/roles.json', BUCKET_NAME, 'roles.json')
 
 def setup(bot):
     bot.add_cog(Roles(bot))

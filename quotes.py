@@ -1,3 +1,7 @@
+# ScottBot by github.com/scottn12
+# quotes.py
+# Contains all commands related to ScottBot's quote functionality.
+
 from discord.ext import commands
 from bot import BUCKET_NAME, s3
 import json
@@ -6,14 +10,15 @@ import time
 import re
 
 class Quotes:
-    '''Commands for quotes.'''
+    """Commands for quotes."""
     def __init__(self, bot):
         self.bot = bot
-        self.cacheJSON = None
+        with open('data/quotes.json', 'r') as f:
+            self.cacheJSON = json.load(f)
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, description='You may not mention a user in a quote.')
     async def addQuote(self, ctx):
-        '''Adds a quote to the list of quotes.'''
+        """Adds a quote to the list of quotes."""
         if ctx.message.content[:4] == '!aq ':
             quote = ctx.message.content[4:]
         else:
@@ -27,7 +32,7 @@ class Quotes:
             await self.bot.say('Error! You cannot mention someone in a quote.')
             return
 
-        data = self.fetchJSON('data/serverData.json')
+        data = self.cacheJSON
 
         serverID = ctx.message.server.id
         if serverID in data:  # Check if server is registered yet
@@ -47,8 +52,7 @@ class Quotes:
             }
             total = 1
 
-        self.writeJSON('data/serverData.json')
-        s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
+        self.writeJSON('quotes.json')
 
         await self.bot.say(f'Quote **{total}** added!')
 
@@ -60,7 +64,7 @@ class Quotes:
     @commands.command(pass_context=True)
     async def quote(self, ctx):
         """Display the quote at the given index."""
-        data = self.fetchJSON('data/serverData.json')
+        data = self.cacheJSON
         serverID = ctx.message.server.id
         if serverID in data and 'quotes' in data[serverID] and data[serverID]['quotes']:  # Check if server/quotes are registered
             quotes = data[serverID]['quotes']
@@ -68,20 +72,25 @@ class Quotes:
             await self.bot.say('Error! No quotes found! Use `!addQuote` to add quotes.')
             return
 
-        try:
-            index = int(ctx.message.content.split()[1])
-        except:
+        # Find/Write Quotes
+        indexes = ctx.message.content.split()[1:]
+        content = ''
+        for index in indexes:
+            try:
+                index = int(index)
+            except ValueError:
+                continue  # Ignore non-numbers (kevin)
+            if index > len(quotes) or index <= 0:
+                content += f'Error! Quote {index} does not exist! Use `!allQuotes` to see the full list of quotes.\n'
+                continue
+            if not quotes[index-1]:
+                content += f'Error! Quote `{index}` has been deleted.\n'
+            else:
+                content += f'{quotes[index-1]} `{index}`\n'
+        if not content:
             await self.bot.say('Error! No quote number provided! Use `!allQuotes` to see the full list quotes.')
-            return
-
-        if index > len(quotes) or index <= 0:
-            await self.bot.say('Error! That quote does not exist! Use `!allQuotes` to see the full list of quotes.')
-            return
-
-        if not quotes[index-1]:
-            await self.bot.say('Error! That quote has been deleted.')
         else:
-            await self.bot.say(quotes[index-1])
+            await self.bot.say(content)
 
     @commands.command(pass_context=True)
     async def q(self, ctx):
@@ -92,7 +101,7 @@ class Quotes:
     async def randomQuote(self, ctx):
         """ScottBot says a random quote."""
         MAX_QUOTES = 5
-        data = self.fetchJSON('data/serverData.json')
+        data = self.cacheJSON
 
         serverID = ctx.message.server.id
         if serverID in data and 'quotes' in data[serverID] and data[serverID]['quotes']:  # Check if server/quotes are registered
@@ -127,34 +136,48 @@ class Quotes:
     async def allQuotes(self, ctx):
         """Displays all registered quotes."""
         # Setup
-        data = self.fetchJSON('data/serverData.json')
+        data = self.cacheJSON
         serverID = ctx.message.server.id
         if serverID in data and 'quotes' in data[serverID] and data[serverID]['quotes']:  # Check if server/quotes are registered
             quotes = data[serverID]['quotes']
         else:
             await self.bot.say('Error! No quotes found! Use !addQuote to add quotes.')
             return
-        MAX = 25
-        TIMEOUT = 180
+        MAX_CHARS = 1500
         total = len(quotes)
+        tempQuotes = [i for i in quotes if i]  # Get copy of quotes with no None values
+        string = '\n'.join(tempQuotes)
+        total_len = len(string) + 4*total  # 4 characters to account for quote number
 
         # All quotes can fit on one  page
         content = '```'
-        if total <= MAX:
+        if total_len <= MAX_CHARS:
             for i in range(total):
+                if not quotes[i]:  # Don't add deleted quotes
+                    continue
                 content += f'{str(i+1):3s} {quotes[i]}\n'
             content += '```'
             await self.bot.say(content)
             return
 
-        # Multiple pages needed
-        content = f'**Active for {TIMEOUT//60} minutes.**\n```'
-        for i in range(MAX):
+        # Set up pages
+        page = 0
+        MAX_CHARS = 1000
+        TIMEOUT = 180
+        start = f'**Active for {TIMEOUT//60} minutes.**\n```'
+        pages = [start]
+        for i in range(total):
             if not quotes[i]:  # Don't add deleted quotes
                 continue
-            content += f'{str(i+1):3s} {quotes[i]}\n'
-        content += '```'
-        msg = await self.bot.say(content)
+            if len(pages[page]) + len(quotes[i])+4 > MAX_CHARS:  # End of page
+                pages[page] += '```'
+                pages.append(start)
+                page += 1
+            pages[page] += f'{str(i+1):3s} {quotes[i]}\n'
+        pages[page] += '```'
+
+        # Send and wait for reactions
+        msg = await self.bot.say(pages[0])
         react = [u"\u25C0", u"\u25B6"]
         await self.bot.add_reaction(msg, react[0])  # Back
         await self.bot.add_reaction(msg, react[1])  # Forward
@@ -171,31 +194,15 @@ class Quotes:
                 if page == 0:  # Already on the first page
                     continue
                 page -= 1
-                content = f'**Active for {TIMEOUT//60} minutes.**\n```'
-                for i in range(page * MAX, page * MAX + MAX):
-                    if not quotes[i]:  # Don't add deleted quotes
-                        continue
-                    content += f'{str(i+1):3s} {quotes[i]}\n'
-                content += '```'
-                await self.bot.edit_message(msg, new_content=content)
+                await self.bot.edit_message(msg, new_content=pages[page])
                 continue
             # Forward
             else:
-                if page * MAX + MAX-1 >= total - 1:  # Already on the last page
+                if page == len(pages) - 1:  # Already on last page
                     continue
                 page += 1
-                if page * MAX + MAX-1 >= total:  # Already on the last page
-                    end_i = page * MAX + total % MAX
-                else:
-                    end_i = page * MAX + MAX
-                content = f'**Active for {TIMEOUT//60} minutes.**\n```'
-                for i in range(page * MAX, end_i):
-                    if not quotes[i]:  # Don't add deleted quotes
-                        continue
-                    content += f'{str(i + 1):3s} {quotes[i]}\n'
-                content += '```'
-                await self.bot.edit_message(msg, new_content=content)
-        content = content.replace(f'Active for {TIMEOUT//60} minutes.', 'NO LONGER ACTIVE')
+                await self.bot.edit_message(msg, new_content=pages[page])
+        content = msg.content.replace(f'Active for {TIMEOUT//60} minutes.', 'NO LONGER ACTIVE') + '**NO LONGER ACTIVE**'
         await self.bot.edit_message(msg, new_content=content)
 
     @commands.command(pass_context=True)
@@ -203,17 +210,17 @@ class Quotes:
         """Alias for !allQuotes."""
         await self.allQuotes.invoke(ctx)
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, description='!changeQuote quoteNumber newQuote (Delete if no newQuote is provided)')
+    @commands.has_permissions(administrator=True)
     async def changeQuote(self, ctx):
-        """Change or delete a quote !changeQuote quoteNumber newQuote"""
-        data = self.fetchJSON('data/serverData.json')
+        """Change or delete a given quote (ADMIN)."""
+        data = self.cacheJSON
         serverID = ctx.message.server.id
         if serverID in data and 'quotes' in data[serverID] and data[serverID]['quotes']:  # Check if server/quotes are registered
             quotes = data[serverID]['quotes']
         else:
             await self.bot.say('Error! No quotes registered yet! Use `!addQuote` to add quotes.')
             return
-
         # Parse
         content = ctx.message.content
         if content[:3] == '!cq':
@@ -267,8 +274,7 @@ class Quotes:
                 else:
                     quotes[quote_num-1] = new
                 data[serverID]['quotes'] = quotes
-                self.writeJSON('data/serverData.json')
-                s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
+                self.writeJSON('quotes.json')
                 await self.bot.say('Success!')
                 return
             else:
@@ -282,10 +288,10 @@ class Quotes:
         """Alias for !changeQuote."""
         await self.changeQuote.invoke(ctx)
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, description='!searchQuote keyword1 keyword2 keyword3')
     async def searchQuote(self, ctx):
         """Search for quotes."""
-        data = self.fetchJSON('data/serverData.json')
+        data = self.cacheJSON
         serverID = ctx.message.server.id
         if serverID in data and 'quotes' in data[serverID] and data[serverID]['quotes']:  # Check if server/quotes are registered
             quotes = data[serverID]['quotes']
@@ -309,6 +315,7 @@ class Quotes:
         quoteNum = 1
         total_results = 0
         total_len = 0
+        MAX_CHARS = 1500
         for quote in quotes:
             if not quote:
                 continue
@@ -333,7 +340,7 @@ class Quotes:
             return
 
         content = f'**{total_results} Matches Found!**\n'
-        if total_len < 1500:  # Fits on one page
+        if total_len < MAX_CHARS:  # Fits on one page
             for key in sorted(results.keys(), reverse=True):
                 content += f'{key} keyword'
                 if key == 1:
@@ -349,6 +356,7 @@ class Quotes:
         # Set up pages
         pages = [f'**{total_results} Matches Found!**\n']
         page = 0
+        MAX_CHARS = 1000
         for key in sorted(results.keys(), reverse=True):
             start = f'{key} keyword'
             if key == 1:
@@ -357,9 +365,9 @@ class Quotes:
                 start += f's matched ({len(results[key])}):\n```'
             pages[page] += start
             for value in results[key]:
-                if len(pages[page]) > 1000:  # Reached end of page
+                if len(pages[page]) + len(value[1])+4 > MAX_CHARS:  # End of page
                     pages[page] += '```'
-                    pages.append(start)
+                    pages.append('```')
                     page += 1
                 pages[page] += f'{str(value[0]):3s} {value[1]}\n'
             pages[page] += '```'
@@ -402,7 +410,7 @@ class Quotes:
     @commands.command(pass_context=True)
     async def matchQuote(self, ctx):
         """Guess the missing word from the quote provided."""
-        data = self.fetchJSON('data/serverData.json')
+        data = self.cacheJSON
         serverID = ctx.message.server.id
         if serverID in data and 'quotes' in data[serverID] and data[serverID]['quotes']:  # Check if server/quotes are registered
             quotes = data[serverID]['quotes'].copy()
@@ -412,7 +420,6 @@ class Quotes:
 
         # Try to find quote that works until you run out of quotes
         eligible = []
-        quote = ''
         newQuote = ''
         rng = -1
         while quotes:
@@ -471,8 +478,8 @@ class Quotes:
             wins = 1
             losses = 0
         userID = ctx.message.author.id
-        if 'quoteScores' in data[serverID]:  # Check if quoteScores are registered yet
-            scores = data[serverID]['quoteScores']
+        if 'matchScores' in data[serverID]:  # Check if matchScores are registered yet
+            scores = data[serverID]['matchScores']
             if userID in scores:  # User already registered
                 if win:
                     scores[userID]['wins'] += 1
@@ -485,19 +492,18 @@ class Quotes:
                     "wins": wins,
                     "losses": losses
                 }
-        else:  # add quoteScores field
-            data[serverID]['quoteScores'] = {
+        else:  # add matchScores field
+            data[serverID]['matchScores'] = {
                 userID: {
                     "wins": wins,
                     "losses": losses
                 }
             }
         winRate = round(wins/(wins+losses)*100)
-        msg += f'\nWins: {wins} Losses: {losses} (**{round(wins/(wins+losses)*100)}%**)'
+        msg += f'\nWins: {wins} Losses: {losses} (**{winRate}%**)'
         await self.bot.say(msg)
 
-        self.writeJSON('data/serverData.json')
-        s3.upload_file('data/serverData.json', BUCKET_NAME, 'serverData.json')
+        self.writeJSON('quotes.json')
 
     @commands.command(pass_context=True)
     async def mq(self, ctx):
@@ -507,10 +513,10 @@ class Quotes:
     @commands.command(pass_context=True)
     async def quoteScoreboard(self, ctx):
         """Displays the quote scoreboard."""
-        data = self.fetchJSON('data/serverData.json')
+        data = self.cacheJSON
         serverID = ctx.message.server.id
-        if serverID in data and 'quoteScores' in data[serverID] and data[serverID]['quoteScores']:  # Check if scores are registered
-            scores = data[serverID]['quoteScores']
+        if serverID in data and 'matchScores' in data[serverID] and data[serverID]['matchScores']:  # Check if scores are registered
+            scores = data[serverID]['matchScores']
         else:
             await self.bot.say('Error! No scores recorded yet! Use `!matchQuote` to play.')
             return
@@ -543,12 +549,12 @@ class Quotes:
                     sortedIDs.append(score)
 
         # Display
-        msg = '```Player: \t\t\t\t\tWin Rate:\tWins:\tLosses:\n'
+        msg = f'```{"Player:":15s}\tWin Rate:\tWins:\tLosses:\n'
         for score in sortedIDs:
-            name = await self.bot.get_user_info(score)
+            user = await self.bot.get_user_info(score)
             wins = scores[score]['wins']
             losses = scores[score]['losses']
-            msg += f'{str(name):24s}\t'
+            msg += f'{str(user.name):15s}\t'
             msg += f'{str(round(wins/(wins+losses)*100)) + "%":5s}\t\t'
             msg += f'{str(wins):5s}\t'
             msg += f'{str(losses):5s}\n'
@@ -560,17 +566,11 @@ class Quotes:
         """Alias for !quoteScoreboard."""
         await self.quoteScoreboard.invoke(ctx)
 
-    # Fetch currently cached JSON or load in if not cached
-    def fetchJSON(self, filename):
-        if self.cacheJSON:
-            return self.cacheJSON
-        with open(filename, 'r') as f:
-            self.cacheJSON = json.load(f)
-        return self.cacheJSON
-
+    # Update file with cached JSON and upload to AWS
     def writeJSON(self, filename):
-        with open(filename, 'w') as f:  # Update JSON
+        with open(f'data/{filename}', 'w') as f:  # Update JSON
             json.dump(self.cacheJSON, f, indent=2)
+        s3.upload_file(f'data/{filename}', BUCKET_NAME, filename)
 
 def setup(bot):
     bot.add_cog(Quotes(bot))

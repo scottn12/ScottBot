@@ -1,48 +1,61 @@
 # ScottBot by github.com/scottn12
+# bot.py
+# Contains all essential setup for ScottBot and non-command event handling.
 
 import discord
 from discord.ext import commands
+from discord.ext.commands import CheckFailure
 import os
 from boto3.session import Session
 import json
 import time
 import asyncio
 
+# Globals
+VERSION = '2.7'
 PREFIX = '!'
-VERSION = '2.6.7'
+bot = commands.Bot(command_prefix=PREFIX, description=f'ScottBot Version: {VERSION}')
 
 # S3 Setup
-ACCESS_KEY_ID = os.environ.get('ACCESS_KEY_ID', None)
-ACCESS_SECRET_KEY = os.environ.get('ACCESS_SECRET_KEY', None)
-BUCKET_NAME = os.environ.get('BUCKET_NAME', None)
-REGION_NAME = os.environ.get('REGION_NAME', None)
+ACCESS_KEY_ID = os.environ.get('ACCESS_KEY_ID')
+ACCESS_SECRET_KEY = os.environ.get('ACCESS_SECRET_KEY')
+BUCKET_NAME = os.environ.get('BUCKET_NAME')
+REGION_NAME = os.environ.get('REGION_NAME')
 session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key=ACCESS_SECRET_KEY, region_name=REGION_NAME)
 s3 = session.client('s3')
 
-bot = commands.Bot(command_prefix=PREFIX, description=f'ScottBot Version: {VERSION}')
-
-
+# Download Files
 @bot.event
 async def on_ready():
     # Load Files
-    print('Loading Server Data...')
-    s3.download_file(BUCKET_NAME, 'serverData.json', 'data/serverData.json')
-    print('Loading Streams...')
-    s3.download_file(BUCKET_NAME, 'streams.json', 'data/streams.json')
-    print('Loading DB...')
-    s3.download_file(BUCKET_NAME, 'bot_database.db', 'data/bot_database.db')
-    print('Loading Requests...')
-    s3.download_file(BUCKET_NAME, 'requests.txt', 'data/requests.txt')
+    files = ['quotes.json', 'roles.json', 'streams.json', 'bot_database.db', 'requests.txt']
+    for file in files:
+        print(f'Loading {file}...')
+        s3.download_file(BUCKET_NAME, file, f'data/{file}')
+
+    # Load Cogs
+    for extension in ['flake', 'misc', 'roles', 'quotes']:
+        print('Loading ' + extension + '...')
+        bot.load_extension(extension)
 
     await bot.change_presence(game=discord.Game(name='Overcooked'))
     print(bot.user.name + ' Version ' + VERSION + " is ready!")
+
+# Default Error Handling
+@bot.event
+async def on_command_error(error, ctx):
+    if isinstance(error, CheckFailure):
+        await bot.send_message(ctx.message.channel, 'Permission Denied.')
+    else:
+        await bot.send_message(ctx.message.channel, f'Unknown Error Occurred: ```{error}```')
+        raise error
 
 # Stream Ping
 @bot.event
 async def on_member_update(before, after):
     if (before.game == None or before.game.type != 1) and (after.game != None and after.game.type == 1): # Before = Not Streaming, After = Streaming
         serverID = before.server.id
-        with open('data/serverData.json','r') as f: # Load server data JSON
+        with open('data/streams.json', 'r') as f: # Load streams JSON
             data = json.load(f)
         if serverID in data and 'streamChannelID' in data[serverID] and data[serverID]['streamChannelID']: # Check if server/channelID is registered
             channelID = data[serverID]['streamChannelID']
@@ -72,22 +85,14 @@ async def on_member_update(before, after):
         if curr > cooldownTime:  # Cooldown expired - ping
             msgStr = roleMention + after.mention + ' has just gone live at ' + after.game.url + ' !'
             await bot.send_message(discord.Object(id=channelID), msgStr)
-            print('PING')
-        else:
-            print('ON COOLDOWN')
-            print('current\t\t\tcooldown\t\tdelta')
-            print(str(curr)+'\t'+str(cooldownTime) + '\t' + str(cooldownTime-curr))
 
         # Update cooldown time (7200 seconds = 2 hours)
         await asyncio.sleep(5)
-        data[userID] = time.time() + 7200
-        with open('data/streams.json', 'w') as f:  # Update Streams JSON
+        with open('data/streams.json', 'r+') as f:  # Load streams JSON
+            data = json.load(f)
+            data[userID] = time.time() + 7200
             json.dump(data, f, indent=2)
         s3.upload_file('data/streams.json', BUCKET_NAME, 'streams.json')
-        print('done!')
 
 if __name__ == '__main__':
-    for extension in ['admin', 'flake', 'misc', 'roles', 'quotes']:
-        print('Loading ' + extension + '...')
-        bot.load_extension(extension)
-    bot.run(os.environ.get('BOT_TOKEN', None))
+    bot.run(os.environ.get('BOT_TOKEN'))

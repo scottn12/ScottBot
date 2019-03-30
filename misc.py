@@ -1,10 +1,15 @@
+# ScottBot by github.com/scottn12
+# misc.py
+# Contains all commands that work independently of other commands.
+
 from discord.ext import commands
 from bot import VERSION, BUCKET_NAME, s3
 import smtplib
 import os
+import json
 
 class Misc:
-    '''Miscellaneous commands anyone can use.'''
+    """Miscellaneous commands anyone can use."""
     def __init__(self, bot):
         self.bot = bot
         self.bot.remove_command('help')
@@ -31,9 +36,9 @@ class Misc:
         emailContent = 'Subject: New Feature Request for ScottBot\n\nUser: {}\nServer: {}\n\n{}'.format(str(ctx.message.author), str(ctx.message.server), msg)
 
         # GMail
-        FROM_EMAIL = os.environ.get('FROM_EMAIL', None)
-        FROM_PSWD = os.environ.get('FROM_PSWD', None)
-        TO_EMAIL = os.environ.get('TO_EMAIL', None)
+        FROM_EMAIL = os.environ.get('FROM_EMAIL')
+        FROM_PSWD = os.environ.get('FROM_PSWD')
+        TO_EMAIL = os.environ.get('TO_EMAIL')
 
         s = smtplib.SMTP('smtp.gmail.com', 587)
         s.starttls()
@@ -91,6 +96,82 @@ class Misc:
         react = ['1⃣', '2⃣', '3⃣', '4⃣', '5⃣', '6⃣', '7⃣', '8⃣', '9⃣'] # unicode for emoji's 1-9
         for i in range(len(choices)):
             await self.bot.add_reaction(poll, react[i])
+
+    @commands.command(pass_context=True)
+    @commands.has_permissions(administrator=True)
+    @commands.bot_has_permissions(manage_messages=True)
+    async def clear(self, ctx):
+        """Clears all messages in the text channel (ADMIN)."""
+        test_msg = await self.bot.say(
+            "Are you sure you want to permanently clear all the messages from this channel? Type 'Y' to confirm.")
+        if not await self.confirmAction(ctx):
+            await self.bot.say('Clear aborted.')
+            return
+
+        # Test for permissions
+        try:
+            await self.bot.delete_message(test_msg)
+        except:
+            await self.bot.say('Error! ScottBot needs permissions to do this!')
+            return
+
+        # Delete
+        async for message in self.bot.logs_from(ctx.message.channel):
+            await self.bot.delete_message(message)
+
+    @commands.command(pass_context=True)
+    @commands.has_permissions(administrator=True)
+    async def streamPing(self, ctx):
+        """Allows ScottBot alerts when someone starts streaming. (ADMIN)"""
+        roles = ctx.message.role_mentions  # Get roles mentioned
+        if len(roles) > 1:
+            await self.bot.say('Error! Maximum of one role allowed.')
+            return
+        try:
+            roleID = roles[0].id
+            if roles[0].is_everyone:
+                await self.bot.say('Error! The role cannot be "everyone".')
+                return
+        except:
+            roleID = None
+
+        with open('data/quotes.json', 'r') as f:
+            data = json.load(f)
+
+        serverID = ctx.message.server.id
+        channelID = ctx.message.channel.id
+
+        if serverID in data:  # Check if server is registered yet
+            if 'streamChannelID' in data[serverID]:  # Check if stream is registered yet
+                if data[serverID]['streamChannelID'] == channelID and data[serverID]['streamRoleID'] == roleID:  # Same info -> disable stream ping
+                    data[serverID]['streamChannelID'] = None
+                    data[serverID]['streamRoleID'] = None
+                    await self.bot.say('StreamPing disabled!')
+                else:  # Enable
+                    data[serverID]['streamChannelID'] = channelID
+                    data[serverID]['streamRoleID'] = roleID
+                    await self.bot.say('StreamPing enabled!')
+            else:
+                data[serverID]['streamChannelID'] = channelID
+                data[serverID]['streamRoleID'] = roleID
+                await self.bot.say('StreamPing enabled!')
+        else:  # Register server w/ new data
+            data[serverID] = {
+                "streamChannelID": channelID,
+                "streamRoleID": roleID
+            }
+            await self.bot.say('StreamPing enabled!')
+
+        with open('data/quotes.json', 'w') as f:  # Update JSON
+            json.dump(data, f, indent=2)
+        s3.upload_file('data/quotes.json', BUCKET_NAME, 'quotes.json')
+
+    # Prompts the user to confirm an action and returns true/false
+    async def confirmAction(self, ctx):
+        msg = await self.bot.wait_for_message(timeout=10, author=ctx.message.author)
+        if not msg or msg.content.lower() != 'y':
+            return False
+        return True
 
 def setup(bot):
     bot.add_cog(Misc(bot))
