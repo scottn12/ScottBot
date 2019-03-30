@@ -52,7 +52,7 @@ class Quotes:
             }
             total = 1
 
-        self.writeJSON('quotes.json')
+        self.writeJSON()
 
         await self.bot.say(f'Quote **{total}** added!')
 
@@ -91,6 +91,8 @@ class Quotes:
             await self.bot.say('Error! No quote number provided! Use `!allQuotes` to see the full list quotes.')
         else:
             await self.bot.say(content)
+
+        writeJSON
 
     @commands.command(pass_context=True)
     async def q(self, ctx):
@@ -503,7 +505,7 @@ class Quotes:
         msg += f'\nWins: {wins} Losses: {losses} (**{winRate}%**)'
         await self.bot.say(msg)
 
-        self.writeJSON('quotes.json')
+        self.writeJSON()
 
     @commands.command(pass_context=True)
     async def mq(self, ctx):
@@ -567,10 +569,10 @@ class Quotes:
         await self.quoteScoreboard.invoke(ctx)
 
     # Update file with cached JSON and upload to AWS
-    def writeJSON(self, filename):
-        with open(f'data/{filename}', 'w') as f:  # Update JSON
+    def writeJSON(self):
+        with open('data/quotes.json', 'w') as f:  # Update JSON
             json.dump(self.cacheJSON, f, indent=2)
-        s3.upload_file(f'data/{filename}', BUCKET_NAME, filename)
+        s3.upload_file('data/quotes.json', BUCKET_NAME, 'quotes.json')
 
 def setup(bot):
     bot.add_cog(Quotes(bot))
