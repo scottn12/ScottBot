@@ -92,8 +92,6 @@ class Quotes:
         else:
             await self.bot.say(content)
 
-        writeJSON
-
     @commands.command(pass_context=True)
     async def q(self, ctx):
         """Alias for !quote."""
@@ -276,7 +274,7 @@ class Quotes:
                 else:
                     quotes[quote_num-1] = new
                 data[serverID]['quotes'] = quotes
-                self.writeJSON('quotes.json')
+                self.writeJSON()
                 await self.bot.say('Success!')
                 return
             else:
