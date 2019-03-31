@@ -173,19 +173,20 @@ class Roles:
     @commands.command(pass_context=True)
     @commands.has_permissions(administrator=True)
     @commands.bot_has_permissions(manage_roles=True)
-    async def addRole(self, ctx, arg=None):
-        '''Creats mentionable role with given name (ADMIN).'''
-        for r in ctx.message.server.roles:
-            if r.name == arg:
-                await self.bot.say(f'Error! Role `{arg}` already exists!')
-                return
-        try:
-            role = await self.bot.create_role(ctx.message.server, name=arg)
-        except:
-            await self.bot.say('Error! ScottBot does not have the necessary permissions!')
+    async def addRole(self, ctx):
+        """Creats mentionable role with given name (ADMIN)."""
+        split = ctx.message.content.split()[1:]
+        if not split:
+            await self.bot.say(f'Error! No name given.')
             return
-        await self.bot.edit_role(ctx.message.server, role, mentionable=True, name=arg)
-        await self.bot.say(f'Role `{arg}` was successfully created!')
+        name = ' '.join(split)
+        for r in ctx.message.server.roles:
+            if r.name == name:
+                await self.bot.say(f'Error! Role `{name}` already exists.')
+                return
+        role = await self.bot.create_role(ctx.message.server, name=name)
+        await self.bot.edit_role(ctx.message.server, role, mentionable=True, name=name)
+        await self.bot.say(f'Role `{name}` was successfully created!')
 
     @commands.command(pass_context=True)
     @commands.bot_has_permissions(manage_roles=True)

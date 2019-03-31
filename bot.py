@@ -4,7 +4,7 @@
 
 import discord
 from discord.ext import commands
-from discord.ext.commands import CheckFailure
+from discord.ext.commands import CheckFailure, CommandNotFound
 import os
 from boto3.session import Session
 import json
@@ -12,7 +12,7 @@ import time
 import asyncio
 
 # Globals
-VERSION = '2.7.0'
+VERSION = '2.7.1'
 PREFIX = '!'
 bot = commands.Bot(command_prefix=PREFIX, description=f'ScottBot Version: {VERSION}')
 
@@ -46,6 +46,8 @@ async def on_ready():
 async def on_command_error(error, ctx):
     if isinstance(error, CheckFailure):
         await bot.send_message(ctx.message.channel, 'Permission Denied.')
+    elif isinstance(error, CommandNotFound):
+        pass
     else:
         await bot.send_message(ctx.message.channel, f'Unknown Error Occurred: ```{error}```')
         raise error
