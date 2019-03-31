@@ -209,7 +209,7 @@ class Roles:
         if serverID in data and 'allowedRoles' in data[serverID] and data[serverID]['allowedRoles']:  # Check if server is registered / role data exists / role data not empty
             allowedRoles = data[serverID]['allowedRoles']
         else:  # No server/role data registered yet
-            await self.bot.say('No roles have been enabled to be used with !role. Use !allowRole to enable roles.')
+            await self.bot.say('No roles have been enabled to be used with !role. Use `!manageRoles` to enable roles.')
             return
 
         user = ctx.message.author
@@ -264,7 +264,7 @@ class Roles:
         if serverID in data and 'allowedRoles' in data[serverID] and data[serverID]['allowedRoles']:  # Check if server is registered / role data exists / role data not empty
             allowedRoles = data[serverID]['allowedRoles']
         else:  # No server/role data registered yet
-            await self.bot.say('No roles have been enabled to be used with !role. Use !allowRole to enable roles.')
+            await self.bot.say('No roles have been enabled to be used with !role. Use `!manageRoles` to enable roles.')
             return
 
         for id in allowedRoles:

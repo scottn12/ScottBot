@@ -12,7 +12,7 @@ import time
 import asyncio
 
 # Globals
-VERSION = '2.7.1'
+VERSION = '2.7.2'
 PREFIX = '!'
 bot = commands.Bot(command_prefix=PREFIX, description=f'ScottBot Version: {VERSION}')
 
@@ -24,7 +24,7 @@ REGION_NAME = os.environ.get('REGION_NAME')
 session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key=ACCESS_SECRET_KEY, region_name=REGION_NAME)
 s3 = session.client('s3')
 
-# Download Files
+# Load all essential files
 @bot.event
 async def on_ready():
     # Load Files
@@ -89,10 +89,11 @@ async def on_member_update(before, after):
             await bot.send_message(discord.Object(id=channelID), msgStr)
 
         # Update cooldown time (7200 seconds = 2 hours)
-        await asyncio.sleep(5)
-        with open('data/streams.json', 'r+') as f:  # Load streams JSON
+        await asyncio.sleep(5)  # Wait until all pings are sent
+        with open('data/streams.json', 'r') as f:  # Update loaded JSON in case any changes were made
             data = json.load(f)
             data[userID] = time.time() + 7200
+        with open('data/streams.json', 'w') as f:  # Write
             json.dump(data, f, indent=2)
         s3.upload_file('data/streams.json', BUCKET_NAME, 'streams.json')
 

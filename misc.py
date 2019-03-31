@@ -4,6 +4,7 @@
 
 from discord.ext import commands
 from bot import VERSION, BUCKET_NAME, s3
+from discord.utils import get
 import smtplib
 import os
 import json
@@ -122,49 +123,67 @@ class Misc:
     @commands.command(pass_context=True)
     @commands.has_permissions(administrator=True)
     async def streamPing(self, ctx):
-        """Allows ScottBot alerts when someone starts streaming. (ADMIN)"""
-        roles = ctx.message.role_mentions  # Get roles mentioned
-        if len(roles) > 1:
-            await self.bot.say('Error! Maximum of one role allowed.')
+        """Allows ScottBot alerts when someone starts streaming (ADMIN)."""
+        # Find role desired (if any)
+        content = ctx.message.content[12:]
+        roleID = None  # Default None if no role provided
+        if content == 'everyone':
+            await self.bot.say('Error! `everyone` is not a valid role. To have ScottBot announce when every user goes live, simply use `!streamPing` alone.')
             return
-        try:
-            roleID = roles[0].id
-            if roles[0].is_everyone:
-                await self.bot.say('Error! The role cannot be "everyone".')
-                return
-        except:
-            roleID = None
+        elif content != '':
+            role = get(ctx.message.server.roles, name=content)
+            if not role:  # Check mentioned roles if any
+                roles = ctx.message.role_mentions
+                if not roles:
+                    await self.bot.say(f'Error! `{content}` is not a valid role!')
+                    return
+                if len(roles) > 1:
+                    await self.bot.say('Error! Only one role is allowed.')
+                    return
+                role = roles[0]
+                roleID = role.id
+            else:
+                if role.is_everyone:
+                    await self.bot.say('Error! `everyone` is not a valid role. To have ScottBot announce when every user goes live, simply use `!streamPing` alone.')
+                    return
+                roleID = role.id
 
-        with open('data/quotes.json', 'r') as f:
+        with open('data/streams.json', 'r') as f:
             data = json.load(f)
 
         serverID = ctx.message.server.id
         channelID = ctx.message.channel.id
-
+        enable = True
         if serverID in data:  # Check if server is registered yet
             if 'streamChannelID' in data[serverID]:  # Check if stream is registered yet
                 if data[serverID]['streamChannelID'] == channelID and data[serverID]['streamRoleID'] == roleID:  # Same info -> disable stream ping
                     data[serverID]['streamChannelID'] = None
                     data[serverID]['streamRoleID'] = None
-                    await self.bot.say('StreamPing disabled!')
+                    enable = False
                 else:  # Enable
                     data[serverID]['streamChannelID'] = channelID
                     data[serverID]['streamRoleID'] = roleID
-                    await self.bot.say('StreamPing enabled!')
             else:
                 data[serverID]['streamChannelID'] = channelID
                 data[serverID]['streamRoleID'] = roleID
-                await self.bot.say('StreamPing enabled!')
         else:  # Register server w/ new data
             data[serverID] = {
                 "streamChannelID": channelID,
                 "streamRoleID": roleID
             }
-            await self.bot.say('StreamPing enabled!')
+        msg = ''
+        if enable and roleID:
+            msg += f'StreamPing enabled for members of `{role}`!'
+        elif enable and not roleID:
+            msg += f'StreamPing enabled for **ALL USERS**! Use `!streamPing "RoleName"` to __only__ ping members of that specific role.'
+        else:
+            msg += 'StreamPing disabled!'
+        await self.bot.say(msg)
 
-        with open('data/quotes.json', 'w') as f:  # Update JSON
+        # Update JSON
+        with open('data/streams.json', 'w') as f:  # Update JSON
             json.dump(data, f, indent=2)
-        s3.upload_file('data/quotes.json', BUCKET_NAME, 'quotes.json')
+        s3.upload_file('data/streams.json', BUCKET_NAME, 'streams.json')
 
     # Prompts the user to confirm an action and returns true/false
     async def confirmAction(self, ctx):
