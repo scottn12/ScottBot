@@ -86,7 +86,7 @@ class Quotes:
             if not quotes[index-1]:
                 content += f'Error! Quote `{index}` has been deleted.\n'
             else:
-                content += f'{quotes[index-1]} `{index}`\n'
+                content += f'{quotes[index-1]}\n'
         if not content:
             await self.bot.say('Error! No quote number provided! Use `!allQuotes` to see the full list quotes.')
         else:
@@ -105,7 +105,7 @@ class Quotes:
 
         serverID = ctx.message.server.id
         if serverID in data and 'quotes' in data[serverID] and data[serverID]['quotes']:  # Check if server/quotes are registered
-            quotes = data[serverID]['quotes']
+            quotes = data[serverID]['quotes'].copy()
         else:
             await self.bot.say('Error! No quotes found! Use `!addQuote` to add quotes.')
             return
@@ -121,10 +121,17 @@ class Quotes:
 
         content = ''
         for _ in range(arg):
-            rng = random.randint(0, len(quotes) - 1)
-            while not quotes[rng]:
+            # Look until you run out of non-deleted quotes
+            rng = -1
+            while quotes:
                 rng = random.randint(0, len(quotes) - 1)
-            content += f'{quotes[rng]} `{str(rng+1):3s}`\n'
+                if not quotes[rng]:
+                    print(rng)
+                    quotes.remove(quotes[rng])  # Remove deleted quotes from copy
+                else:
+                    break
+            i = data[serverID]['quotes'].index(quotes[rng])  # Get original index before quotes may have been removed
+            content += f'{quotes[rng]} `{i+1}`\n'
         await self.bot.say(content)
 
     @commands.command(pass_context=True)
@@ -420,6 +427,7 @@ class Quotes:
 
         # Try to find quote that works until you run out of quotes
         eligible = []
+        quote = ''
         newQuote = ''
         rng = -1
         while quotes:
@@ -469,7 +477,8 @@ class Quotes:
             msg += '**Wrong, you lose!**'
         else:
             msg += '**Time\'s up, you lose!**'
-        msg += f'\n{filled} `{rng+1}`'
+        i = data[serverID]['quotes'].index(quote)  # Get original index before potentially removing other quotes
+        msg += f'\n{filled} `{i+1}`'
 
         # Update score
         wins = 0
