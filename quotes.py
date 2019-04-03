@@ -370,7 +370,11 @@ class Quotes:
                 start += f' matched ({len(results[key])}):\n```'
             else:
                 start += f's matched ({len(results[key])}):\n```'
-            pages[page] += start
+            if len(pages[page]) + len(start) + len(results[key][0])+4 > MAX_CHARS:  # End of page before next key
+                pages.append(start)
+                page += 1
+            else:
+                pages[page] += start
             for value in results[key]:
                 if len(pages[page]) + len(value[1])+4 > MAX_CHARS:  # End of page
                     pages[page] += '```'
