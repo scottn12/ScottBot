@@ -86,7 +86,7 @@ class Quotes:
             if not quotes[index-1]:
                 content += f'Error! Quote `{index}` has been deleted.\n'
             else:
-                content += f'{quotes[index-1]}\n'
+                content += f'{quotes[index-1]} `{index}`\n'
         if not content:
             await self.bot.say('Error! No quote number provided! Use `!allQuotes` to see the full list quotes.')
         else:
