@@ -8,6 +8,7 @@ from discord.utils import get
 import smtplib
 import os
 import json
+import random
 
 class Misc:
     """Miscellaneous commands anyone can use."""
@@ -54,6 +55,11 @@ class Misc:
         '''Prints ScottBot Version.'''
         await self.bot.say('ScottBot is running Version: ' + VERSION)
 
+    @commands.command(pass_context=False)
+    async def source(self):
+        """Link the source code for ScottBot."""
+        await self.bot.say('https://github.com/scottn12/ScottBot')
+
     @commands.command(pass_context=True)
     async def hello(self, ctx):
         '''ScottBot greets you.'''
@@ -99,12 +105,25 @@ class Misc:
             await self.bot.add_reaction(poll, react[i])
 
     @commands.command(pass_context=True)
+    async def rng(self, ctx):
+        """ScottBot randomly picks one of the arguments. Coin flip if no arguments given."""
+        content = ctx.message.content[5:]
+        if not content:
+            num = random.randint(0,1)
+            if num == 0:
+                await self.bot.say('Heads!')
+            else:
+                await self.bot.say('Tails!')
+        else:
+            args = content.split()
+            await self.bot.say(args[random.randint(0, len(args)-1)])
+
+    @commands.command(pass_context=True)
     @commands.has_permissions(administrator=True)
     @commands.bot_has_permissions(manage_messages=True)
     async def clear(self, ctx):
         """Clears all messages in the text channel (ADMIN)."""
-        test_msg = await self.bot.say(
-            "Are you sure you want to permanently clear all the messages from this channel? Type 'Y' to confirm.")
+        test_msg = await self.bot.say("Are you sure you want to permanently clear all the messages from this channel? Type 'Y' to confirm.")
         if not await self.confirmAction(ctx):
             await self.bot.say('Clear aborted.')
             return
@@ -126,7 +145,8 @@ class Misc:
         """Allows ScottBot alerts when someone starts streaming (ADMIN)."""
         # Find role desired (if any)
         content = ctx.message.content[12:]
-        roleID = None  # Default None if no role provided
+        role = None  # Default None if no role provided
+        roleID = None
         if content == 'everyone':
             await self.bot.say('Error! `everyone` is not a valid role. To have ScottBot announce when every user goes live, simply use `!streamPing` alone.')
             return

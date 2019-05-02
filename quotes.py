@@ -81,7 +81,7 @@ class Quotes:
             except ValueError:
                 continue  # Ignore non-numbers (kevin)
             if index > len(quotes) or index <= 0:
-                content += f'Error! Quote {index} does not exist! Use `!allQuotes` to see the full list of quotes.\n'
+                content += f'Error! Quote `{index}` does not exist! Use `!allQuotes` to see the full list of quotes.\n'
                 continue
             if not quotes[index-1]:
                 content += f'Error! Quote `{index}` has been deleted.\n'
