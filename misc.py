@@ -207,12 +207,11 @@ class Misc:
         s3.upload_file('data/streams.json', BUCKET_NAME, 'streams.json')
 
     @commands.command(pass_context=True)
-    @commands.has_permissions(administrator=True)
-    async def region(self, ctx, arg=None):
-        """Change server region. Swaps between US East and US Central if none is provided."""
+    async def region(self, ctx, region=None):
+        """Changes server region. Swaps between US East and US Central if none is provided."""
 
         curr = ctx.message.server.region
-        if not arg:
+        if not region:
             if curr == ServerRegion.us_east:
                 await self.bot.edit_server(ctx.message.server, region=ServerRegion.us_central)
                 await self.bot.say('The region has been changed to `us-central`.')
@@ -221,17 +220,17 @@ class Misc:
                 await self.bot.say('The region has been changed to `us-east`.')
             return
 
-        if arg.lower() == 'east':
-            arg = ServerRegion.us_east
-        elif arg.lower() == 'central':
-            arg = ServerRegion.us_central
-        elif arg.lower() == 'south':
-            arg = ServerRegion.us_south
-        elif arg.lower() == 'west':
-            arg = ServerRegion.us_west
+        if region.lower() == 'east':
+            region = ServerRegion.us_east
+        elif region.lower() == 'central':
+            region = ServerRegion.us_central
+        elif region.lower() == 'south':
+            region = ServerRegion.us_south
+        elif region.lower() == 'west':
+            region = ServerRegion.us_west
 
         try:
-            newRegion = ServerRegion(arg)
+            newRegion = ServerRegion(region)
             if newRegion == curr:
                 await self.bot.say(f'The region is already `{newRegion}`.')
             else:
