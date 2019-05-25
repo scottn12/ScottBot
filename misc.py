@@ -3,6 +3,7 @@
 # Contains all commands that work independently of other commands.
 
 from discord.ext import commands
+from discord import ServerRegion
 from bot import VERSION, BUCKET_NAME, s3
 from discord.utils import get
 import smtplib
@@ -76,14 +77,14 @@ class Misc:
             question = msg[0]
             choices = msg[1:]
         except:
-            await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): !poll Question | Choice | Choice')
+            await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): `!poll Question | Choice | Choice`')
             return
         #Check if number of choices is valid
         if (len(choices) < 2):
-            await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): !poll Question | Choice | Choice')
+            await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): `!poll Question | Choice | Choice`')
             return
         if (len(choices) > 9):
-            await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): !poll Question | Choice | Choice')
+            await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): `!poll Question | Choice | Choice`')
             return
 
         # Try to delete original message
@@ -204,6 +205,40 @@ class Misc:
         with open('data/streams.json', 'w') as f:  # Update JSON
             json.dump(data, f, indent=2)
         s3.upload_file('data/streams.json', BUCKET_NAME, 'streams.json')
+
+    @commands.command(pass_context=True)
+    @commands.has_permissions(administrator=True)
+    async def region(self, ctx, arg=None):
+        """Change server region. Swaps between US East and US Central if none is provided."""
+
+        curr = ctx.message.server.region
+        if not arg:
+            if curr == ServerRegion.us_east:
+                await self.bot.edit_server(ctx.message.server, region=ServerRegion.us_central)
+                await self.bot.say('The region has been changed to `us-central`.')
+            else:
+                await self.bot.edit_server(ctx.message.server, region=ServerRegion.us_east)
+                await self.bot.say('The region has been changed to `us-east`.')
+            return
+
+        if arg.lower() == 'east':
+            arg = ServerRegion.us_east
+        elif arg.lower() == 'central':
+            arg = ServerRegion.us_central
+        elif arg.lower() == 'south':
+            arg = ServerRegion.us_south
+        elif arg.lower() == 'west':
+            arg = ServerRegion.us_west
+
+        try:
+            newRegion = ServerRegion(arg)
+            if newRegion == curr:
+                await self.bot.say(f'The region is already `{newRegion}`.')
+            else:
+                await self.bot.edit_server(ctx.message.server, region=newRegion)
+                await self.bot.say(f'The region has been changed to `{newRegion}`.')
+        except ValueError:
+            await self.bot.say('Invalid Region.')
 
     # Prompts the user to confirm an action and returns true/false
     async def confirmAction(self, ctx):

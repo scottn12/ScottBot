@@ -12,7 +12,7 @@ import time
 import asyncio
 
 # Globals
-VERSION = '2.7.3'
+VERSION = '2.7.4'
 PREFIX = '!'
 bot = commands.Bot(command_prefix=PREFIX, description=f'ScottBot Version: {VERSION}')
 
