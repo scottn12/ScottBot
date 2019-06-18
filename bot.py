@@ -97,5 +97,13 @@ async def on_member_update(before, after):
             json.dump(data, f, indent=2)
         s3.upload_file('data/streams.json', BUCKET_NAME, 'streams.json')
 
+@bot.event
+async def on_message(message):
+    if message.author.id == os.environ.get('SECRET_USER') and 'corrupt' in message.content.lower():
+        await bot.send_message(message.author, "Your message has been deleted as it has been marked as anti-Scott propaganda. Please refrain from speaking poorly upon the regime. And remember, ScottBot is always listening. Have a great day! :blush:")
+        await bot.delete_message(message)
+        return
+    await bot.process_commands(message)
+
 if __name__ == '__main__':
     bot.run(os.environ.get('BOT_TOKEN'))
