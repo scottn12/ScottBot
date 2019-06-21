@@ -99,10 +99,13 @@ async def on_member_update(before, after):
 
 @bot.event
 async def on_message(message):
-    if message.author.id == os.environ.get('SECRET_USER') and 'corrupt' in message.content.lower():
-        await bot.send_message(message.author, "Your message has been deleted as it has been marked as anti-Scott propaganda. Please refrain from speaking poorly upon the regime. And remember, ScottBot is always listening.")
-        await bot.delete_message(message)
-        return
+    if message.author.id == os.environ.get('SECRET_USER'):
+        if 'corrupt' in message.content.lower():
+            await bot.send_message(message.author, 'Your message has been deleted as it has been marked as anti-Scott propaganda. Please refrain from speaking poorly upon the regime. And remember, ScottBot is always listening.')
+            await bot.delete_message(message)
+        elif 'corupt' in message.content.lower():
+            await bot.send_message(message.channel, 'You know what\'s `corupt`? Enforcing a strict no alcohol policy, but drinking in your own room all the time.')
+            return
     await bot.process_commands(message)
 
 if __name__ == '__main__':
