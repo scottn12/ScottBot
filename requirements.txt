@@ -1,2 +1,4 @@
 discord
 boto3
+fuzzywuzzy
+python-Levenshtein

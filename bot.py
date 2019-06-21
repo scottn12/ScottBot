@@ -10,6 +10,7 @@ from boto3.session import Session
 import json
 import time
 import asyncio
+from fuzzywuzzy import fuzz
 
 # Globals
 VERSION = '2.7.4'
@@ -103,9 +104,13 @@ async def on_message(message):
         if 'corrupt' in message.content.lower():
             await bot.send_message(message.author, 'Your message has been deleted as it has been marked as anti-Scott propaganda. Please refrain from speaking poorly upon the regime. And remember, ScottBot is always listening.')
             await bot.delete_message(message)
-        elif 'corupt' in message.content.lower():
-            await bot.send_message(message.channel, 'You know what\'s `corupt`? Enforcing a strict no alcohol policy, but drinking in your own room all the time.')
             return
+        words = message.content.lower().split()
+        for word in words:
+            ratio = fuzz.ratio(word, 'corrupt')
+            if ratio > 50:
+                await bot.send_message(message.channel, 'You know what\'s corrupt? Enforcing a strict no alcohol policy, but drinking in your own room all the time.')
+                return
     await bot.process_commands(message)
 
 if __name__ == '__main__':
