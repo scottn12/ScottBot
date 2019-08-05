@@ -4,23 +4,141 @@
 
 from discord.ext import commands
 from discord import ServerRegion
-from bot import VERSION, BUCKET_NAME, s3
+from bot import VERSION
 from discord.utils import get
 import smtplib
 import os
 import json
 import random
+import time
 
 class Misc:
     """Miscellaneous commands anyone can use."""
     def __init__(self, bot):
         self.bot = bot
         self.bot.remove_command('help')
+        self.hangmanChannels = []
  
     @commands.command(pass_context=True)
     async def help(self, ctx, *args: str):
         '''Shows this message.'''
         return await commands.bot._default_help_command(ctx, *args)
+
+    @commands.command(pass_context=True)
+    async def hangman(self, ctx):
+        """Play hangman."""
+        if ctx.message.channel in self.hangmanChannels:
+            await self.bot.send_message(ctx.message.author, 'There is already a game in that channel! Please try again later.')
+            return
+        self.hangmanChannels.append(ctx.message.channel)
+        await self.bot.send_message(ctx.message.author, 'Send your phrase here!')
+        phrase = None
+        while not phrase:
+            msg = await self.bot.wait_for_message(timeout=60, author=ctx.message.author)
+            if not msg:
+                self.hangmanChannels.remove(ctx.message.channel)
+                await self.bot.send_message(ctx.message.author, 'No phrase provided. Use `!hangman` in your server channel again to retry.')
+                return
+            if not msg.channel.is_private:
+                continue
+            phrase = msg.content
+            if len(phrase) < 6:
+                phrase = None
+                await self.bot.send_message(ctx.message.author, 'Phrase must be at least 6 characters long. Enter a new phrase.')
+                continue
+
+            validWords = True
+            for word in phrase.split():
+                if not word.isalpha():
+                    validWords = False
+            if not validWords:
+                phrase = None
+                await self.bot.send_message(ctx.message.author, 'Phrases must contain ONLY letters. Enter a new phrase.')
+                continue
+
+        await self.bot.send_message(ctx.message.author, 'Success!')
+        words = phrase.split()
+        hiddenWords  = [''] * len(words)
+        spacedWords  = [''] * len(words)
+        for i in range(len(words)):
+            spacedWords[i] = ' '.join([char for char in words[i]])
+            hiddenWords[i] = '_ ' * len(words[i])
+        spacedPhrase = '  '.join(spacedWords)
+        hiddenPhrase = ' '.join(hiddenWords)
+        start = 'Guessed:\n ___________\n |        |\n |\n |\n |\n |\n---'
+        fails = 0
+        guessed = ''
+        await self.bot.say(f'Hangman game created by: **{ctx.message.author.name.replace(ctx.message.author.discriminator, "")}**\n```{start}\n{hiddenPhrase}```')
+        timeout = 900
+        while True:
+            win = False
+            lose = False
+            msg = await self.bot.wait_for_message(timeout=timeout, channel=ctx.message.channel)
+            timeout = 300
+            if not msg:
+                self.hangmanChannels.remove(ctx.message.channel)
+                await self.bot.say(f'Hangman game created by: **{ctx.message.author.name.replace(ctx.message.author.discriminator, "")}**\n```{start}\n{spacedPhrase}```**Game expired due to inactivity.**')
+                return
+            if msg.author == ctx.message.author:
+                continue
+            guess = msg.content
+            if guess.lower() == phrase.lower():
+                await self.bot.say(f'Hangman game created by: **{ctx.message.author.name.replace(ctx.message.author.discriminator, "")}**\n```{start}\n{spacedPhrase}```**You Win!**')
+                break
+            if len(guess) != 1 or not guess.isalpha():
+                continue
+            if guess.upper() in guessed:
+                reactions = ['😡', '💤', '😴', '🙃', '🤣', '🙄' ,'👺', '🖕', '🤢', '🤷', '🍆', '🍑', '💦', '👀', '🤔', '🚽', '😖', '😱', '💯', '🐸', '🔥', '🏳️‍🌈', '💔', '😉']
+                await self.bot.add_reaction(msg, random.choice(reactions))
+                continue
+            if guessed == '':
+                guessed = guess.upper()
+            else:
+                guessed += f', {guess.upper()}'
+            if guess.lower() not in phrase.lower():
+                fails += 1
+            else:
+                indices = [i for i, x in enumerate(spacedPhrase.lower()) if x == guess.lower()]
+                for index in indices:
+                    hiddenPhrase = hiddenPhrase[:index] + spacedPhrase[index] + hiddenPhrase[index + 1:]
+                if hiddenPhrase.count('_') == 0:
+                    win = True
+
+            if fails == 0:
+                start = f'Guessed: {guessed}\n ___________\n |        |\n |\n |\n |\n |\n---'
+            elif fails == 1:
+                start = f'\nGuessed: {guessed}\n ___________\n |        |\n |        O\n |\n |\n |\n---'
+            elif fails == 2:
+                start = f'\nGuessed: {guessed}\n ___________\n |        |\n |        O\n |        |\n |\n |\n---'
+            elif fails == 3:
+                start = f'Guessed: {guessed}\n ___________\n |        |\n |        O\n |       -|\n |\n |\n---'
+            elif fails == 4:
+                start = f'Guessed: {guessed}\n ___________\n |        |\n |        O\n |       -|-\n |\n |\n---'
+            elif fails == 5:
+                start = f'Guessed: {guessed}\n ___________\n |        |\n |        O\n |       -|-\n |       /\n |\n---'
+            else:
+                start = f'Guessed: {guessed}\n ___________\n ___________\n |        |\n |        O\n |       -|-\n |       / \\\n |\n---'
+                lose = True
+
+            if win:
+                await self.bot.say(f'Hangman game created by: **{ctx.message.author.name.replace(ctx.message.author.discriminator, "")}**\n```{start}\n{hiddenPhrase}```**You Win!**')
+                break
+            elif lose:
+                await self.bot.say(f'Hangman game created by: **{ctx.message.author.name.replace(ctx.message.author.discriminator, "")}**\n```{start}\n{spacedPhrase}```**You Lose!**')
+                break
+            else:
+                await self.bot.say(f'Hangman game created by: **{ctx.message.author.name.replace(ctx.message.author.discriminator, "")}**\n```{start}\n{hiddenPhrase}```')
+
+        self.hangmanChannels.remove(ctx.message.channel)
+
+    @commands.command(pass_context=True)
+    async def shutdown(self, ctx):
+        """Shutdown ScottBot (Scott Only)"""
+        if ctx.message.author.id == os.environ.get('SCOTT'):
+            await self.bot.say('Shutting down...')
+            await self.bot.logout()
+        else:
+            await self.bot.say('Permission Denied.')
 
     @commands.command(pass_context=True)
     async def request(self, ctx):
@@ -34,7 +152,6 @@ class Misc:
         req = '\"{}\" - {}\n'.format(msg, ctx.message.author.name)
         with open('data/requests.txt', 'a') as f:
             f.write(req)
-        s3.upload_file('data/requests.txt', BUCKET_NAME, 'requests.txt')
 
         emailContent = 'Subject: New Feature Request for ScottBot\n\nUser: {}\nServer: {}\n\n{}'.format(str(ctx.message.author), str(ctx.message.server), msg)
 
@@ -68,8 +185,17 @@ class Misc:
         await self.bot.say("Hello {}!".format(name))
 
     @commands.command(pass_context=True)
+    async def ironman(self, ctx):
+        """Creates a randomized SSBM ironman order."""
+        chars = ['Mario', 'Bowser',	'Peach', 'Yoshi', 'Donkey Kong', 'Captain Falcon', 'Fox', 'Ness', 'Ice Climbers', 'Kirby', 'Samus',	'Zelda', 'Sheik', 'Link', 'Pikachu', 'Jigglypuff', 'Dr. Mario', 'Luigi', 'Ganondorf', 'Falco', 'Young Link', 'Pichu', 'Mewtwo', 'Mr. Game & Watch', 'Marth', 'Roy']
+        msg = ''
+        while chars:
+            msg += chars.pop(random.randint(0, len(chars) - 1)) + '\n'
+        await self.bot.send_message(ctx.message.author, msg)
+
+    @commands.command(pass_context=True)
     async def poll(self, ctx):
-        '''Creates a poll: !poll Question | Choice | Choice'''
+        """Creates a poll: !poll Question | Choice | Choice"""
         # Check for valid input and parse
         try:
             msg = ctx.message.content[6:]
@@ -79,7 +205,7 @@ class Misc:
         except:
             await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): `!poll Question | Choice | Choice`')
             return
-        #Check if number of choices is valid
+        # Check if number of choices is valid
         if (len(choices) < 2):
             await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): `!poll Question | Choice | Choice`')
             return
@@ -204,7 +330,26 @@ class Misc:
         # Update JSON
         with open('data/streams.json', 'w') as f:  # Update JSON
             json.dump(data, f, indent=2)
-        s3.upload_file('data/streams.json', BUCKET_NAME, 'streams.json')
+
+    @commands.command(pass_context=True)
+    async def powerUp(self, ctx):
+        """Poggy Woggy"""
+
+        pog = '<:ebenPog:593599153263869952> '
+        wog = '<:ebenWog:602589822682398740> '
+        checked = ':white_large_square: '
+        unchecked = ':white_square_button: '
+        arrow = ':arrow_right: '
+        question = ':question: '
+        n = 10
+        msg = await self.bot.say('`POWERING UP!!!`\n' + pog + unchecked * n + arrow + question)
+
+        for i in range(n):
+            time.sleep(.5)
+            if i == n - 1:
+                await self.bot.edit_message(msg, '`WAKANDA FOREVER!!!!!!!!!`\n' + pog + checked * n + arrow + wog)
+            else:
+                await self.bot.edit_message(msg, '`POWERING UP!!!`\n' + pog + checked * (i+1) + unchecked * (n-i-1) + arrow + question)
 
     @commands.command(pass_context=True)
     async def region(self, ctx, region=None):

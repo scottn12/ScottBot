@@ -1,4 +1,4 @@
-discord
+discord.py==0.16.12
 boto3
 fuzzywuzzy
 python-Levenshtein

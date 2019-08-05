@@ -3,7 +3,6 @@
 # Contains all commands related to ScottBot's quote functionality.
 
 from discord.ext import commands
-from bot import BUCKET_NAME, s3
 import json
 import random
 import time
@@ -579,11 +578,10 @@ class Quotes:
         """Alias for !quoteScoreboard."""
         await self.quoteScoreboard.invoke(ctx)
 
-    # Update file with cached JSON and upload to AWS
+    # Update file with cached JSON
     def writeJSON(self):
         with open('data/quotes.json', 'w') as f:  # Update JSON
             json.dump(self.cacheJSON, f, indent=2)
-        s3.upload_file('data/quotes.json', BUCKET_NAME, 'quotes.json')
 
 def setup(bot):
     bot.add_cog(Quotes(bot))

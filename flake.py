@@ -4,7 +4,6 @@
 
 from discord.ext import commands
 import sqlite3
-from bot import BUCKET_NAME, s3
 
 class Flake:
     '''Commands for Flakers.'''
@@ -25,8 +24,6 @@ class Flake:
         c.execute('DROP TABLE IF EXISTS flake' + ctx.message.server.id)
         c.close()
         conn.close()
-
-        s3.upload_file('bot_database.db', BUCKET_NAME, 'bot_database.db')
 
     @commands.command(pass_context=True)
     async def flake(self, ctx):
@@ -68,7 +65,6 @@ def createTable(name):
     c.execute('CREATE TABLE IF NOT EXISTS {}(ID TEXT PRIMARY KEY, Count INTEGER)'.format(name))
     c.close()
     conn.close()
-    s3.upload_file('data/bot_database.db', BUCKET_NAME, 'bot_database.db')
 
 # Incerment flaker count if exists, if not create
 def flakeIncrement(ID, serverID):
@@ -81,7 +77,6 @@ def flakeIncrement(ID, serverID):
     conn.commit()
     c.close()
     conn.close()
-    s3.upload_file('data/bot_database.db', BUCKET_NAME, 'bot_database.db')
     return rtn
 
 # Read from DB - output is a string formatted for discord text

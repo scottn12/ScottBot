@@ -5,7 +5,6 @@
 import discord
 from discord.ext import commands
 from discord.utils import get
-from bot import BUCKET_NAME, s3
 import json
 import time
 
@@ -422,7 +421,6 @@ class Roles:
     def writeJSON(self):
         with open('data/roles.json', 'w') as f:  # Update JSON
             json.dump(self.cacheJSON, f, indent=2)
-        s3.upload_file('data/roles.json', BUCKET_NAME, 'roles.json')
 
 def setup(bot):
     bot.add_cog(Roles(bot))

@@ -6,34 +6,20 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import CheckFailure, CommandNotFound
 import os
-from boto3.session import Session
 import json
 import time
 import asyncio
 from fuzzywuzzy import fuzz
+import random
 
 # Globals
-VERSION = '2.7.4'
+VERSION = '2.8'
 PREFIX = '!'
 bot = commands.Bot(command_prefix=PREFIX, description=f'ScottBot Version: {VERSION}')
-
-# S3 Setup
-ACCESS_KEY_ID = os.environ.get('ACCESS_KEY_ID')
-ACCESS_SECRET_KEY = os.environ.get('ACCESS_SECRET_KEY')
-BUCKET_NAME = os.environ.get('BUCKET_NAME')
-REGION_NAME = os.environ.get('REGION_NAME')
-session = Session(aws_access_key_id=ACCESS_KEY_ID, aws_secret_access_key=ACCESS_SECRET_KEY, region_name=REGION_NAME)
-s3 = session.client('s3')
 
 # Load all essential files
 @bot.event
 async def on_ready():
-    # Load Files
-    files = ['quotes.json', 'roles.json', 'streams.json', 'bot_database.db', 'requests.txt']
-    for file in files:
-        print(f'Loading {file}...')
-        s3.download_file(BUCKET_NAME, file, f'data/{file}')
-
     # Load Cogs
     for extension in ['flake', 'misc', 'roles', 'quotes']:
         print('Loading ' + extension + '...')
@@ -56,11 +42,11 @@ async def on_command_error(error, ctx):
 # Stream Ping
 @bot.event
 async def on_member_update(before, after):
-    if (before.game == None or before.game.type != 1) and (after.game != None and after.game.type == 1): # Before = Not Streaming, After = Streaming
+    if (before.game == None or before.game.type != 1) and (after.game != None and after.game.type == 1):  # Before = Not Streaming, After = Streaming
         serverID = before.server.id
         with open('data/streams.json', 'r') as f: # Load streams JSON
             data = json.load(f)
-        if serverID in data and 'streamChannelID' in data[serverID] and data[serverID]['streamChannelID']: # Check if server/channelID is registered
+        if serverID in data and 'streamChannelID' in data[serverID] and data[serverID]['streamChannelID']:  # Check if server/channelID is registered
             channelID = data[serverID]['streamChannelID']
         else:
             return # don't ping if not enabled
@@ -109,8 +95,9 @@ async def on_message(message):
         for word in words:
             ratio = fuzz.ratio(word, 'corrupt')
             if ratio > 50:
-                await bot.send_message(message.channel, 'You know what\'s corrupt? Enforcing a strict no alcohol policy, but drinking in your own room all the time.')
-                return
+                await bot.send_message(message.channel, f'You know what\'s `{word}`? Enforcing a strict no alcohol policy, but drinking in your own room all the time.')
+        if random.randint(1, 70) == 69:
+            await bot.send_message(message.channel, ':rage: *REEEEEEEEEE* YASUO :rage:')
     await bot.process_commands(message)
 
 if __name__ == '__main__':
