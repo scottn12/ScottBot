@@ -5,6 +5,7 @@
 import discord
 from discord.ext import commands
 from discord.ext.commands import CheckFailure, CommandNotFound
+from discord.utils import get
 import os
 import json
 import time
@@ -13,7 +14,7 @@ from fuzzywuzzy import fuzz
 import random
 
 # Globals
-VERSION = '2.8'
+VERSION = '2.8.1'
 PREFIX = '!'
 bot = commands.Bot(command_prefix=PREFIX, description=f'ScottBot Version: {VERSION}')
 
@@ -27,6 +28,7 @@ async def on_ready():
 
     await bot.change_presence(game=discord.Game(name='Overcooked'))
     print(bot.user.name + ' Version ' + VERSION + " is ready!")
+    await bot.send_message(get(bot.get_all_members(), id=os.environ.get('SCOTT')), f'ScottBot Version {VERSION} has been deployed!')
 
 # Default Error Handling
 @bot.event
@@ -82,7 +84,6 @@ async def on_member_update(before, after):
             data[userID] = time.time() + 7200
         with open('data/streams.json', 'w') as f:  # Write
             json.dump(data, f, indent=2)
-        s3.upload_file('data/streams.json', BUCKET_NAME, 'streams.json')
 
 @bot.event
 async def on_message(message):

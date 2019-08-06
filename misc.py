@@ -342,6 +342,15 @@ class Misc:
         arrow = ':arrow_right: '
         question = ':question: '
         n = 10
+
+        words = ctx.message.content.split()
+        if len(words) == 3:
+            pog = words[1]
+            wog = words[2]
+        elif len(words) != 1:
+            await self.bot.say('You must `!powerUp` with two emoji\'s, or none for the default `!powerUp`.')
+            return
+
         msg = await self.bot.say('`POWERING UP!!!`\n' + pog + unchecked * n + arrow + question)
 
         for i in range(n):
