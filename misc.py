@@ -136,6 +136,7 @@ class Misc:
         """Shutdown ScottBot (Scott Only)"""
         if ctx.message.author.id == os.environ.get('SCOTT'):
             await self.bot.say('Shutting down...')
+            os.system('git pull origin develop')
             await self.bot.logout()
         else:
             await self.bot.say('Permission Denied.')
