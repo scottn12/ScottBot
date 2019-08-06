@@ -14,7 +14,7 @@ from fuzzywuzzy import fuzz
 import random
 
 # Globals
-VERSION = '2.8.2'
+VERSION = '2.8.3'
 PREFIX = '!'
 bot = commands.Bot(command_prefix=PREFIX, description=f'ScottBot Version: {VERSION}')
 
