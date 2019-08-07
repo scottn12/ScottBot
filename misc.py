@@ -348,14 +348,13 @@ class Misc:
         if len(words) == 3:
             pog = words[1]
             wog = words[2]
+            try:
+                await self.bot.delete_message(ctx.message)
+            except:
+                pass
         elif len(words) != 1:
             await self.bot.say('You must `!powerUp` with two emoji\'s, or none for the default `!powerUp`.')
             return
-
-        try:
-            await self.bot.delete_message(ctx.message)
-        except:
-            print('yeet')
 
         msg = await self.bot.say('`POWERING UP!!!`\n' + pog + unchecked * n + arrow + question)
 
