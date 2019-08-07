@@ -132,8 +132,8 @@ class Misc:
         self.hangmanChannels.remove(ctx.message.channel)
 
     @commands.command(pass_context=True)
-    async def shutdown(self, ctx):
-        """Shutdown ScottBot (Scott Only)"""
+    async def restart(self, ctx):
+        """Restart and update ScottBot (Scott Only)."""
         if ctx.message.author.id == os.environ.get('SCOTT'):
             await self.bot.say('Shutting down...')
             os.system('git pull origin develop')
@@ -351,6 +351,11 @@ class Misc:
         elif len(words) != 1:
             await self.bot.say('You must `!powerUp` with two emoji\'s, or none for the default `!powerUp`.')
             return
+
+        try:
+            await self.bot.delete_message(ctx.message)
+        except:
+            print('yeet')
 
         msg = await self.bot.say('`POWERING UP!!!`\n' + pog + unchecked * n + arrow + question)
 
