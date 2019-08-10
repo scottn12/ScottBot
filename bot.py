@@ -15,7 +15,7 @@ from fuzzywuzzy import fuzz
 import random
 
 # Globals
-VERSION = '2.8.3'
+VERSION = '2.8.4'
 PREFIX = '!'
 bot = commands.Bot(command_prefix=PREFIX, description=f'ScottBot Version: {VERSION}')
 
@@ -40,7 +40,13 @@ async def bean():
                     user = list(server.members)[random.randint(0, len(server.members) - 1)]
                     if user == bot.user:
                         user = None
-                # Bean The User
+                # Bean The User and add to beanCount
+                if user.id in data['beanCount']:
+                    data['beanCount'][user.id] += 1
+                else:
+                    data['beanCount'][user.id] = 1
+                with open('data/bean.json', 'w') as f:
+                    json.dump(data, f, indent=2)
                 channel = get(bot.get_all_channels(), id=channelID)
                 await bot.send_file(channel, 'assets/img/bean.png', content=user.mention)
 
@@ -128,7 +134,7 @@ async def on_message(message):
             ratio = fuzz.ratio(word, 'corrupt')
             if ratio > 50:
                 await bot.send_message(message.channel, f'You know what\'s `{word}`? Enforcing a strict no alcohol policy, but drinking in your own room all the time.')
-        if random.randint(1, 70) == 69:
+        if random.randint(0, 100) == 12:
             await bot.send_message(message.channel, ':rage: *REEEEEEEEEE* YASUO :rage:')
     await bot.process_commands(message)
 
