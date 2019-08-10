@@ -9,14 +9,45 @@ from discord.utils import get
 import os
 import json
 import time
+import datetime
 import asyncio
 from fuzzywuzzy import fuzz
 import random
 
 # Globals
-VERSION = '2.8.2'
+VERSION = '2.8.3'
 PREFIX = '!'
 bot = commands.Bot(command_prefix=PREFIX, description=f'ScottBot Version: {VERSION}')
+
+
+# Randomly BEANS people
+async def bean():
+    while True:
+        if random.randint(0, 0) == 0:
+            hour = datetime.datetime.now().hour
+            with open('data/bean.json', 'r') as f:
+                data = json.load(f)
+            if data['servers'] and not (3 <= hour <= 9):  # Server(s) registered and the hour is not 3AM - 9AM
+                server = None
+                channelID = None
+                while not server:  # Ensure the ScottBot is still in the server that is picked
+                    rng = random.randint(0, len(data['servers']) - 1)
+                    serverID = list(data['servers'][rng].keys())[0]
+                    channelID = data['servers'][rng][serverID]['channel']
+                    server = get(bot.servers, id=serverID)
+                user = None
+                while not user:  # Prevent ScottBot from getting beaned (that would just be embarrassing)
+                    user = list(server.members)[random.randint(0, len(server.members) - 1)]
+                    if user == bot.user:
+                        user = None
+                # Bean The User
+                channel = get(bot.get_all_channels(), id=channelID)
+                await bot.send_file(channel, 'assets/img/bean.png', content=user.mention)
+
+        wait = random.randint(3600, 7200)  # Wait 1-2 hours for next bean attempt
+        wait = 1
+        await asyncio.sleep(wait)
+
 
 # Load all essential files
 @bot.event
@@ -29,6 +60,7 @@ async def on_ready():
     await bot.change_presence(game=discord.Game(name='Overcooked'))
     print(bot.user.name + ' Version ' + VERSION + " is ready!")
     await bot.send_message(get(bot.get_all_members(), id=os.environ.get('SCOTT')), f'ScottBot Version {VERSION} has been deployed!')
+    await bean()
 
 # Default Error Handling
 @bot.event

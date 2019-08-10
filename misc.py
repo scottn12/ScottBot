@@ -135,7 +135,7 @@ class Misc:
     async def restart(self, ctx):
         """Restart and update ScottBot (Scott Only)."""
         if ctx.message.author.id == os.environ.get('SCOTT'):
-            await self.bot.say('Shutting down...')
+            await self.bot.say('Restarting..')
             os.system('git pull origin develop')
             await self.bot.logout()
         else:
@@ -266,6 +266,29 @@ class Misc:
         # Delete
         async for message in self.bot.logs_from(ctx.message.channel):
             await self.bot.delete_message(message)
+
+    @commands.command(pass_context=True)
+    @commands.has_permissions(administrator=True)
+    async def bean(self, ctx):
+        """Allows ScottBot to bean morons."""
+        serverID = ctx.message.server.id
+        with open('data/bean.json', 'r') as f:
+            data = json.load(f)
+        found = False
+        for server in data['servers']:
+            if list(server.keys())[0] == serverID:
+                data['servers'].remove(server)
+                await self.bot.say('This server will no longer get beaned.')
+                found = True
+        if not found:
+            data['servers'].append({
+                serverID: {
+                    'channel': ctx.message.channel.id
+                }
+            })
+            await self.bot.say('This server will now get BEANED in this channel!')
+        with open('data/bean.json', 'w') as f:  # Update JSON
+            json.dump(data, f, indent=2)
 
     @commands.command(pass_context=True)
     @commands.has_permissions(administrator=True)
