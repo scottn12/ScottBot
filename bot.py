@@ -45,7 +45,6 @@ async def bean():
                 await bot.send_file(channel, 'assets/img/bean.png', content=user.mention)
 
         wait = random.randint(3600, 7200)  # Wait 1-2 hours for next bean attempt
-        wait = 1
         await asyncio.sleep(wait)
 
 
