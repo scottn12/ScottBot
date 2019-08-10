@@ -23,7 +23,7 @@ bot = commands.Bot(command_prefix=PREFIX, description=f'ScottBot Version: {VERSI
 # Randomly BEANS people
 async def bean():
     while True:
-        if random.randint(0, 0) == 0:
+        if random.randint(0, 1000) == 12:
             hour = datetime.datetime.now().hour
             with open('data/bean.json', 'r') as f:
                 data = json.load(f)

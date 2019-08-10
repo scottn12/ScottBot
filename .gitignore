@@ -1,0 +1,6 @@
+/data
+run.sh
+/__pycache__
+/venv
+/.idea
+logs.txt
