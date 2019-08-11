@@ -15,7 +15,7 @@ from fuzzywuzzy import fuzz
 import random
 
 # Globals
-VERSION = '2.8.4'
+VERSION = '2.8.5'
 PREFIX = '!'
 bot = commands.Bot(command_prefix=PREFIX, description=f'ScottBot Version: {VERSION}')
 
@@ -23,18 +23,18 @@ bot = commands.Bot(command_prefix=PREFIX, description=f'ScottBot Version: {VERSI
 # Randomly BEANS people
 async def bean():
     while True:
-        if random.randint(0, 1000) == 12:
-            hour = datetime.datetime.now().hour
-            with open('data/bean.json', 'r') as f:
-                data = json.load(f)
-            if data['servers'] and not (3 <= hour <= 9):  # Server(s) registered and the hour is not 3AM - 9AM
-                server = None
-                channelID = None
-                while not server:  # Ensure the ScottBot is still in the server that is picked
-                    rng = random.randint(0, len(data['servers']) - 1)
-                    serverID = list(data['servers'][rng].keys())[0]
-                    channelID = data['servers'][rng][serverID]['channel']
-                    server = get(bot.servers, id=serverID)
+        with open('data/bean.json', 'r') as f:
+            data = json.load(f)
+        hour = datetime.datetime.now().hour
+        if data['servers'] and not (3 <= hour <= 9):  # Server(s) registered and the hour is not 3AM - 9AM
+            for serverObj in data['servers']:  # Attempt to bean each registered server
+                if random.randint(0, 1000) != 12:
+                    continue
+                serverID = list(serverObj.keys())[0]
+                channelID = serverObj[serverID]['channel']
+                server = get(bot.servers, id=serverID)
+                if not server:  # Ensure ScottBot is still in the server
+                    continue
                 user = None
                 while not user:  # Prevent ScottBot from getting beaned (that would just be embarrassing)
                     user = list(server.members)[random.randint(0, len(server.members) - 1)]
@@ -52,7 +52,6 @@ async def bean():
 
         wait = random.randint(3600, 7200)  # Wait 1-2 hours for next bean attempt
         await asyncio.sleep(wait)
-
 
 # Load all essential files
 @bot.event

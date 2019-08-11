@@ -135,7 +135,7 @@ class Misc:
     async def restart(self, ctx):
         """Restart and update ScottBot (Scott Only)."""
         if ctx.message.author.id == os.environ.get('SCOTT'):
-            await self.bot.say('Restarting..')
+            await self.bot.say('Restarting...')
             os.system('git pull origin develop')
             await self.bot.logout()
         else:
@@ -289,6 +289,31 @@ class Misc:
             await self.bot.say('This server will now get BEANED in this channel!')
         with open('data/bean.json', 'w') as f:  # Update JSON
             json.dump(data, f, indent=2)
+
+    @commands.command(pass_context=True)
+    async def beanCount(self):
+        """Checks how much people have been beaned."""
+        with open('data/bean.json', 'r') as f:
+            data = json.load(f)
+        if not data['beanCount']:
+            await self.bot.say('Nobody in this server has been beaned!')
+            return
+        users = []
+        for userID in data['beanCount']:
+            user = get(self.bot.get_all_members(), id=userID)
+            if not user:  # Ensure user is in this server
+                continue
+            users.append({'name': user.name, 'count': data['beanCount'][userID]})
+        sortedUsers = sorted(users, key=lambda k: k['count']).reverse()
+        print(sortedUsers)
+
+        # Display
+        msg = f'```{"Victim:":15s}\tBeans:\n'
+        for user in users:
+            msg += f'{str(user["name"]):15s}\t'
+            msg += f'{user["count"]}\n'
+        msg += '```'
+        await self.bot.say(msg)
 
     @commands.command(pass_context=True)
     @commands.has_permissions(administrator=True)
