@@ -15,7 +15,7 @@ from fuzzywuzzy import fuzz
 import random
 
 # Globals
-VERSION = '2.8.5.2'
+VERSION = '2.8.5.3'
 PREFIX = '!'
 bot = commands.Bot(command_prefix=PREFIX, description=f'ScottBot Version: {VERSION}')
 
@@ -133,11 +133,6 @@ async def on_message(message):
             await bot.send_message(message.author, 'Your message has been deleted as it has been marked as anti-Scott propaganda. Please refrain from speaking poorly upon the regime. And remember, ScottBot is always listening.')
             await bot.delete_message(message)
             return
-        words = message.content.lower().split()
-        for word in words:
-            ratio = fuzz.ratio(word, 'corrupt')
-            if ratio > 50:
-                await bot.send_message(message.channel, f'You know what\'s `{word}`? Enforcing a strict no alcohol policy, but drinking in your own room all the time.')
         if random.randint(0, 100) == 12:
             await bot.send_message(message.channel, ':rage: *REEEEEEEEEE* YASUO :rage:')
     await bot.process_commands(message)
