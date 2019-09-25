@@ -15,7 +15,7 @@ from fuzzywuzzy import fuzz
 import random
 
 # Globals
-VERSION = '2.8.5'
+VERSION = '2.8.5.1'
 PREFIX = '!'
 bot = commands.Bot(command_prefix=PREFIX, description=f'ScottBot Version: {VERSION}')
 
@@ -123,6 +123,11 @@ async def on_member_update(before, after):
 
 @bot.event
 async def on_message(message):
+    if message.server and message.server.id == os.environ.get('MAIN_SERVER') and 'league' in message.content.lower():
+        emojis = ['😂', '🤣', '🤢', '🤒', '🤕', '😡', '👺', '😤', '🤧', '🙄', '👻', '😱', '👎', '💩', '😷', '😒', '😖', '😴', '💤', '🖕', '👶', '🙅', '💇', '🤦', '🙈', '💦', '🍑', '🍆', '🚨', '💀', '📉', '⚠', '☣', '💔', '🔫', '🗑', '🚽']
+        for i in range(3):
+            emoji = emojis.pop(random.randint(0, len(emojis) - 1))
+            await bot.add_reaction(message, emoji)
     if message.author.id == os.environ.get('SECRET_USER'):
         if 'corrupt' in message.content.lower():
             await bot.send_message(message.author, 'Your message has been deleted as it has been marked as anti-Scott propaganda. Please refrain from speaking poorly upon the regime. And remember, ScottBot is always listening.')
