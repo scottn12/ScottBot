@@ -15,7 +15,7 @@ from fuzzywuzzy import fuzz
 import random
 
 # Globals
-VERSION = '2.8.5.1'
+VERSION = '2.8.5.2'
 PREFIX = '!'
 bot = commands.Bot(command_prefix=PREFIX, description=f'ScottBot Version: {VERSION}')
 
@@ -123,7 +123,7 @@ async def on_member_update(before, after):
 
 @bot.event
 async def on_message(message):
-    if message.server and message.server.id == os.environ.get('MAIN_SERVER') and 'league' in message.content.lower():
+    if 'league' in message.content.lower() and message.author != bot.user and message.server and message.server.id == os.environ.get('MAIN_SERVER'):
         emojis = ['😂', '🤣', '🤢', '🤒', '🤕', '😡', '👺', '😤', '🤧', '🙄', '👻', '😱', '👎', '💩', '😷', '😒', '😖', '😴', '💤', '🖕', '👶', '🙅', '💇', '🤦', '🙈', '💦', '🍑', '🍆', '🚨', '💀', '📉', '⚠', '☣', '💔', '🔫', '🗑', '🚽']
         for i in range(3):
             emoji = emojis.pop(random.randint(0, len(emojis) - 1))
