@@ -450,6 +450,11 @@ class Misc:
     @commands.command(pass_context=True)
     async def kevin(self, ctx):
         """Get Kevin's Schedule for this week. !kevin {next (optional)}"""
+        # Only allow in main server or Kevin DM's
+        if not ((ctx.message.channel.is_private and ctx.message.channel.user.id == os.environ.get('KEVIN')) or (ctx.message.server and ctx.message.server.id == os.environ.get('MAIN_SERVER'))):
+            await self.bot.say('This command is disabled in this server.')
+            return
+
         # Check if schedule needs rotation
         now = datetime.datetime.now()
         currentWeek = datetime.date(now.year, now.month, now.day).isocalendar()[1]
