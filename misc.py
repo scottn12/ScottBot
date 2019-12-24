@@ -11,6 +11,7 @@ import os
 import json
 import random
 import time
+import datetime
 
 class Misc:
     """Miscellaneous commands anyone can use."""
@@ -445,6 +446,86 @@ class Misc:
                 await self.bot.say(f'The region has been changed to `{newRegion}`.')
         except ValueError:
             await self.bot.say('Invalid Region.')
+
+    @commands.command(pass_context=True)
+    async def kevin(self, ctx):
+        """Get Kevin's Schedule for this week. !kevin {next (optional)}"""
+        # Check if schedule needs rotation
+        now = datetime.datetime.now()
+        currentWeek = datetime.date(now.year, now.month, now.day).isocalendar()[1]
+        nextWeek = currentWeek + 1
+        if currentWeek == 52:
+            nextWeek = 1
+        newData = None
+        with open('data/kevin.json', 'r') as f:
+            data = json.load(f)
+            if 'nextWeek' in data:
+                jsonNextWeek = data['nextWeek']
+                if jsonNextWeek == currentWeek:  # Time to rotate
+                    newData = {}
+                    newData['curr'] = data['next']
+                    newData['currentWeek'] = currentWeek
+                    newData['nextWeek'] = nextWeek
+        if newData:
+            with open('data/kevin.json', 'w') as f:
+                json.dump(newData, f, indent=2)
+
+        # Get current by default if no arguments given
+        if len(ctx.message.content.split()) == 1:
+            with open('data/kevin.json', 'r') as f:
+                data = json.load(f)
+                if 'curr' not in data:
+                    await self.bot.say('No schedule currently saved.')
+                    return
+                msg = f'```Week of {(now - datetime.timedelta(days=now.isoweekday() % 7)).strftime("%m/%d/%Y")}:\n'
+                days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+                for i in range(7):
+                    msg += f'{(days[i] + ":"):11s} {data["curr"][i]}\n'
+                msg += '```'
+                await self.bot.say(msg)
+
+        # Check if Kevin is trying to set schedule
+        elif ctx.message.author.id == os.environ.get('KEVIN') and len(ctx.message.content.split('|')) > 1:
+            days = ctx.message.content.split('|')
+            week = None
+            if 'curr' in days[0].lower():
+                week = 'curr'
+            elif 'next' in days[0].lower():
+                week = 'next'
+            else:
+                await self.bot.say('Error! No week specified. Enter in the format: `!kevin {current/next} | Sunday | Monday | Tuesday | Wednesday | Thursday | Friday | Saturday`')
+            if week and len(days) != 8:
+                await self.bot.say('Error! Incorrect amount of days. Enter in the format: `!kevin {current/next} | Sunday | Monday | Tuesday | Wednesday | Thursday | Friday | Saturday`')
+            else:
+                days = days[1:]  # Remove options entry
+                with open('data/kevin.json', 'r') as f:
+                    data = json.load(f)
+                    data[week] = []
+                    for day in days:
+                        data[week].append(day.strip())
+                with open('data/kevin.json', 'w') as f:
+                    data['currentWeek'] = currentWeek
+                    data['nextWeek'] = nextWeek
+                    json.dump(data, f, indent=2)
+                await self.bot.say('Schedule successfully saved!')
+
+        # Get schedule
+        else:
+            week = 'curr'  # Default
+            if 'next' in ctx.message.content.split()[1].lower():  # Next week requested
+                week = 'next'
+                now = now + datetime.timedelta(days=7)  # Go ahead 7 days
+            with open('data/kevin.json', 'r') as f:
+                data = json.load(f)
+                if week not in data:
+                    await self.bot.say('No schedule saved for next week.')
+                    return
+                msg = f'```Week of {(now - datetime.timedelta(days=now.isoweekday() % 7)).strftime("%m/%d/%Y")}:\n'
+                days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+                for i in range(7):
+                    msg += f'{(days[i] + ":"):11s} {data[week][i]}\n'
+                msg += '```'
+                await self.bot.say(msg)
 
     # Prompts the user to confirm an action and returns true/false
     async def confirmAction(self, ctx):
