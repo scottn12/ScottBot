@@ -14,7 +14,7 @@ import asyncio
 import random
 
 # Globals
-VERSION = '2.9.1'
+VERSION = '2.9.2'
 PREFIX = '!'
 bot = commands.Bot(command_prefix=PREFIX, description=f'ScottBot Version: {VERSION}')
 

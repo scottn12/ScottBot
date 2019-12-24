@@ -480,7 +480,7 @@ class Misc:
             with open('data/kevin.json', 'r') as f:
                 data = json.load(f)
                 if 'curr' not in data:
-                    await self.bot.say('No schedule currently saved.')
+                    await self.bot.say('No schedule currently saved for this week.')
                     return
                 msg = f'```Week of {(now - datetime.timedelta(days=now.isoweekday() % 7)).strftime("%m/%d/%Y")}:\n'
                 days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -523,7 +523,9 @@ class Misc:
             with open('data/kevin.json', 'r') as f:
                 data = json.load(f)
                 if week not in data:
-                    await self.bot.say('No schedule saved for next week.')
+                    if week == 'curr':
+                        week = 'this'
+                    await self.bot.say(f'No schedule currently saved for {week} week.')
                     return
                 msg = f'```Week of {(now - datetime.timedelta(days=now.isoweekday() % 7)).strftime("%m/%d/%Y")}:\n'
                 days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
