@@ -3,7 +3,8 @@
 # Contains all commands related to ScottBot's flake recording functionality.
 
 from discord.ext import commands
-import sqlite3
+from bot import db, cursor
+
 
 class Flake:
     '''Commands for Flakers.'''
@@ -18,28 +19,24 @@ class Flake:
             await self.bot.say('Reset aborted.')
             return
 
-        # Reset
-        conn = sqlite3.connect('data/bot_database.db')
-        c = conn.cursor()
-        c.execute('DROP TABLE IF EXISTS flake' + ctx.message.server.id)
-        c.close()
-        conn.close()
+        cursor.execute('DROP TABLE IF EXISTS flake' + ctx.message.server.id)
+        db.commit()
 
     @commands.command(pass_context=True)
     async def flake(self, ctx):
         '''Increments the flake count for all flakers mentioned.'''
         serverID = ctx.message.server.id
-        createTable('Flake'+serverID)
+        self.createTable('Flake'+serverID)
         flakers = ctx.message.mentions
         for flaker in flakers:
-            count = flakeIncrement(flaker.id, serverID)
+            count = self.flakeIncrement(flaker.id, serverID)
             await self.bot.say(str(flaker.name) + ' has now flaked ' + count + ' times!')
 
     @commands.command(pass_context=True)
     async def flakeRank(self, ctx):
         '''Displays the flake standings.'''
         try:
-            ids, counts = flakeRead(ctx.message.server.id)
+            ids, counts = self.flakeRead(ctx.message.server.id)
         except:
             await self.bot.say('There are no flakers!')
             return
@@ -58,41 +55,32 @@ class Flake:
             return False
         return True
 
-# Setup Database
-def createTable(name):
-    conn = sqlite3.connect('data/bot_database.db')
-    c = conn.cursor()
-    c.execute('CREATE TABLE IF NOT EXISTS {}(ID TEXT PRIMARY KEY, Count INTEGER)'.format(name))
-    c.close()
-    conn.close()
+    # Setup Database
+    def createTable(self, name):
+        cursor.execute('CREATE TABLE IF NOT EXISTS {}(ID TEXT PRIMARY KEY, Count INTEGER)'.format(name))
+        db.commit()
 
-# Incerment flaker count if exists, if not create
-def flakeIncrement(ID, serverID):
-    conn = sqlite3.connect('data/bot_database.db')
-    c = conn.cursor()
-    c.execute('UPDATE Flake'+serverID+' SET Count = Count + 1 WHERE ID = ?', (ID,))
-    c.execute('INSERT OR IGNORE INTO flake'+serverID+' (ID, Count) VALUES (?, 1)', (ID,))
-    c.execute('SELECT Count FROM Flake'+serverID+' WHERE ID = ?', (ID,))
-    rtn = str(c.fetchone()[0])
-    conn.commit()
-    c.close()
-    conn.close()
-    return rtn
+    # Increment flaker count if exists, if not create
+    def flakeIncrement(self, ID, serverID):
+        cursor.execute('UPDATE Flake'+serverID+' SET Count = Count + 1 WHERE ID = ?', (ID,))
+        cursor.execute('INSERT OR IGNORE INTO flake'+serverID+' (ID, Count) VALUES (?, 1)', (ID,))
+        cursor.execute('SELECT Count FROM Flake'+serverID+' WHERE ID = ?', (ID,))
+        rtn = str(cursor.fetchone()[0])
+        db.commit()
+        return rtn
 
-# Read from DB - output is a string formatted for discord text
-def flakeRead(serverID):
-    conn = sqlite3.connect('data/bot_database.db')
-    c = conn.cursor()
-    ids = []
-    counts = []
-    c.execute('SELECT * FROM Flake'+serverID+' ORDER BY Count DESC')
-    rows = c.fetchall()
-    for row in rows:
-        ids.append(row[0])
-        counts.append(row[1])
-    c.close()
-    conn.close()
-    return (ids, counts)
+    # Read from DB - output is a string formatted for discord text
+    def flakeRead(self, serverID):
+        ids = []
+        counts = []
+        cursor.execute('SELECT * FROM Flake' + serverID + ' ORDER BY Count DESC')
+        rows = cursor.fetchall()
+        for row in rows:
+            ids.append(row[0])
+            counts.append(row[1])
+
+        return ids, counts
+
 
 def setup(bot):
     bot.add_cog(Flake(bot))

@@ -8,6 +8,7 @@ import random
 import time
 import re
 
+
 class Quotes:
     """Commands for quotes."""
     def __init__(self, bot):

@@ -9,40 +9,29 @@ from discord.utils import get
 import os
 import json
 import time
-import datetime
 import asyncio
 import random
+import sqlite3
 
 # Globals
-VERSION = '2.9.2'
+VERSION = '2.9.3'
 PREFIX = '!'
 bot = commands.Bot(command_prefix=PREFIX, description=f'ScottBot Version: {VERSION}')
-
-
-# Check if it is time to update Kevin's Schedule
-async def kevinCheck():
-    await bot.wait_until_ready()
-    while not bot.is_closed:
-        now = datetime.datetime.now()
-        if now.isoweekday() == 4 and now.hour == 11 and now.minute == 0:
-            kevin = await bot.get_user_info(os.environ.get('KEVIN'))
-            await bot.send_message(kevin, 'This is a reminder to set your schedule for next week!\nUse `!kevin next | Sunday | Monday | Tuesday | Wednesday | Thursday | Friday | Saturday` to do so.')
-            await asyncio.sleep(604800)  # One week
-        else:
-            await asyncio.sleep(60)
+db = sqlite3.connect('data/bot_database.db')
+cursor = db.cursor()
 
 # Load all essential files
 @bot.event
 async def on_ready():
-    # Load Cogs
-    for extension in ['flake', 'misc', 'roles', 'quotes']:
+    # Load Extensions
+    extensions = ['flake', 'misc', 'roles', 'quotes', 'scottbucks']
+    for extension in extensions:
         print('Loading ' + extension + '...')
         bot.load_extension(extension)
 
     await bot.change_presence(game=discord.Game(name='Overcooked'))
     print(bot.user.name + ' Version ' + VERSION + " is ready!")
     await bot.send_message(get(bot.get_all_members(), id=os.environ.get('SCOTT')), f'ScottBot Version {VERSION} has been deployed!')
-    await bean()
 
 # Default Error Handling
 @bot.event
@@ -99,39 +88,6 @@ async def on_member_update(before, after):
         with open('data/streams.json', 'w') as f:  # Write
             json.dump(data, f, indent=2)
 
-# Randomly BEANS people
-async def bean():
-    while True:
-        with open('data/bean.json', 'r') as f:
-            data = json.load(f)
-        hour = datetime.datetime.now().hour
-        if data['servers'] and not (3 <= hour <= 9):  # Server(s) registered and the hour is not 3AM - 9AM
-            for serverObj in data['servers']:  # Attempt to bean each registered server
-                if random.randint(0, 1000) != 12:
-                    continue
-                serverID = list(serverObj.keys())[0]
-                channelID = serverObj[serverID]['channel']
-                server = get(bot.servers, id=serverID)
-                if not server:  # Ensure ScottBot is still in the server
-                    continue
-                user = None
-                while not user:  # Prevent ScottBot from getting beaned (that would just be embarrassing)
-                    user = list(server.members)[random.randint(0, len(server.members) - 1)]
-                    if user == bot.user:
-                        user = None
-                # Bean The User and add to beanCount
-                if user.id in data['beanCount']:
-                    data['beanCount'][user.id] += 1
-                else:
-                    data['beanCount'][user.id] = 1
-                with open('data/bean.json', 'w') as f:
-                    json.dump(data, f, indent=2)
-                channel = get(bot.get_all_channels(), id=channelID)
-                await bot.send_file(channel, 'assets/img/bean.png', content=user.mention)
-
-        wait = random.randint(3600, 7200)  # Wait 1-2 hours for next bean attempt
-        await asyncio.sleep(wait)
-
 @bot.event
 async def on_message(message):
     if 'league' in message.content.lower() and message.author != bot.user and message.server and message.server.id == os.environ.get('MAIN_SERVER'):
@@ -149,5 +105,4 @@ async def on_message(message):
     await bot.process_commands(message)
 
 if __name__ == '__main__':
-    bot.loop.create_task(kevinCheck())
     bot.run(os.environ.get('BOT_TOKEN'))

@@ -12,6 +12,8 @@ import json
 import random
 import time
 import datetime
+import asyncio
+
 
 class Misc:
     """Miscellaneous commands anyone can use."""
@@ -19,7 +21,9 @@ class Misc:
         self.bot = bot
         self.bot.remove_command('help')
         self.hangmanChannels = []
- 
+        self.bot.loop.create_task(self.kevinCheck())
+        self.bot.loop.create_task(self.beanLoop())
+
     @commands.command(pass_context=True)
     async def help(self, ctx, *args: str):
         '''Shows this message.'''
@@ -316,6 +320,40 @@ class Misc:
         msg += '```'
         await self.bot.say(msg)
 
+    # Randomly BEANS people
+    async def beanLoop(self):
+        await self.bot.wait_until_ready()
+        while not self.bot.is_closed:
+            with open('data/bean.json', 'r') as f:
+                data = json.load(f)
+            hour = datetime.datetime.now().hour
+            if data['servers'] and not (3 <= hour <= 9):  # Server(s) registered and the hour is not 3AM - 9AM
+                for serverObj in data['servers']:  # Attempt to bean each registered server
+                    if random.randint(0, 1000) != 12:
+                        continue
+                    serverID = list(serverObj.keys())[0]
+                    channelID = serverObj[serverID]['channel']
+                    server = get(self.bot.servers, id=serverID)
+                    if not server:  # Ensure ScottBot is still in the server
+                        continue
+                    user = None
+                    while not user:  # Prevent ScottBot from getting beaned (that would just be embarrassing)
+                        user = list(server.members)[random.randint(0, len(server.members) - 1)]
+                        if user == self.bot.user:
+                            user = None
+                    # Bean The User and add to beanCount
+                    if user.id in data['beanCount']:
+                        data['beanCount'][user.id] += 1
+                    else:
+                        data['beanCount'][user.id] = 1
+                    with open('data/bean.json', 'w') as f:
+                        json.dump(data, f, indent=2)
+                    channel = get(self.bot.get_all_channels(), id=channelID)
+                    await self.bot.send_file(channel, 'assets/img/bean.png', content=user.mention)
+
+            wait = random.randint(3600, 7200)  # Wait 1-2 hours for next bean attempt
+            await asyncio.sleep(wait)
+
     @commands.command(pass_context=True)
     @commands.has_permissions(administrator=True)
     async def streamPing(self, ctx):
@@ -459,16 +497,20 @@ class Misc:
         now = datetime.datetime.now()
         currentWeek = datetime.date(now.year, now.month, now.day).isocalendar()[1]
         nextWeek = currentWeek + 1
-        if currentWeek == 52:
+        if currentWeek == 53:
             nextWeek = 1
         newData = None
         with open('data/kevin.json', 'r') as f:
             data = json.load(f)
             if 'nextWeek' in data:
                 jsonNextWeek = data['nextWeek']
+                print(currentWeek)
                 if jsonNextWeek == currentWeek:  # Time to rotate
                     newData = {}
-                    newData['curr'] = data['next']
+                    if 'next' in data:
+                        newData['curr'] = data['next']
+                    else:
+                        newData['curr'] = []
                     newData['currentWeek'] = currentWeek
                     newData['nextWeek'] = nextWeek
         if newData:
@@ -533,6 +575,19 @@ class Misc:
                     msg += f'{(days[i] + ":"):11s} {data[week][i]}\n'
                 msg += '```'
                 await self.bot.say(msg)
+
+    # Check if it is time to update Kevin's Schedule
+    async def kevinCheck(self):
+        await self.bot.wait_until_ready()
+        while not self.bot.is_closed:
+            now = datetime.datetime.now()
+            if now.isoweekday() == 4 and now.hour == 11 and now.minute == 0:
+                kevin = await bot.get_user_info(os.environ.get('KEVIN'))
+                await self.bot.send_message(kevin,
+                                            'This is a reminder to set your schedule for next week!\nUse `!kevin next | Sunday | Monday | Tuesday | Wednesday | Thursday | Friday | Saturday` to do so.')
+                await asyncio.sleep(604800)  # One week
+            else:
+                await asyncio.sleep(60)
 
     # Prompts the user to confirm an action and returns true/false
     async def confirmAction(self, ctx):

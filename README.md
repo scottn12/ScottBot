@@ -5,3 +5,5 @@ To add ScottBot to your server click the following link:
 https://discordapp.com/oauth2/authorize?client_id=465969556633026604&scope=bot
 
 Please note many commands require administrative permissions.
+
+Note this version of the bot only works on discord.py==0.16.12
