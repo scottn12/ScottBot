@@ -141,7 +141,7 @@ class Misc:
         """Restart and update ScottBot (Scott Only)."""
         if ctx.message.author.id == os.environ.get('SCOTT'):
             await self.bot.say('Restarting...')
-            os.system('git pull origin develop')
+            os.system('git pull origin master')
             await self.bot.logout()
         else:
             await self.bot.say('Permission Denied.')
