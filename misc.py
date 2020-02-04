@@ -521,7 +521,7 @@ class Misc:
         if len(ctx.message.content.split()) == 1:
             with open('data/kevin.json', 'r') as f:
                 data = json.load(f)
-                if 'curr' not in data:
+                if 'curr' not in data or data['curr'] == []:
                     await self.bot.say('No schedule currently saved for this week.')
                     return
                 msg = f'```Week of {(now - datetime.timedelta(days=now.isoweekday() % 7)).strftime("%m/%d/%Y")}:\n'
@@ -564,7 +564,7 @@ class Misc:
                 now = now + datetime.timedelta(days=7)  # Go ahead 7 days
             with open('data/kevin.json', 'r') as f:
                 data = json.load(f)
-                if week not in data:
+                if week not in data or data[week] == []:
                     if week == 'curr':
                         week = 'this'
                     await self.bot.say(f'No schedule currently saved for {week} week.')

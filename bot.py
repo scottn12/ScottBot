@@ -24,7 +24,7 @@ cursor = db.cursor()
 @bot.event
 async def on_ready():
     # Load Extensions
-    extensions = ['flake', 'misc', 'roles', 'quotes', 'scottbucks']
+    extensions = ['flake', 'misc', 'roles', 'quotes']
     for extension in extensions:
         print('Loading ' + extension + '...')
         bot.load_extension(extension)
