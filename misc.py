@@ -549,7 +549,10 @@ class Misc:
                     data = json.load(f)
                     data[week] = []
                     for day in days:
-                        data[week].append(day.strip())
+                        val = day.strip()
+                        if val == '':  # Empty values default to Free
+                            val = 'Free'
+                        data[week].append(val)
                 with open('data/kevin.json', 'w') as f:
                     data['currentWeek'] = currentWeek
                     data['nextWeek'] = nextWeek
