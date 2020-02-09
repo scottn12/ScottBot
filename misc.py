@@ -495,7 +495,7 @@ class Misc:
 
         # Check if schedule needs rotation
         now = datetime.datetime.now()
-        currentWeek = datetime.date(now.year, now.month, now.day).isocalendar()[1]
+        currentWeek = int(datetime.datetime.now().strftime("%U"))
         nextWeek = currentWeek + 1
         if currentWeek == 53:
             nextWeek = 1
@@ -504,7 +504,6 @@ class Misc:
             data = json.load(f)
             if 'nextWeek' in data:
                 jsonNextWeek = data['nextWeek']
-                print(currentWeek)
                 if jsonNextWeek == currentWeek:  # Time to rotate
                     newData = {}
                     if 'next' in data:
@@ -513,6 +512,12 @@ class Misc:
                         newData['curr'] = []
                     newData['currentWeek'] = currentWeek
                     newData['nextWeek'] = nextWeek
+                elif currentWeek > jsonNextWeek:  # Both weeks out of date
+                    newData = {}
+                    newData['currentWeek'] = currentWeek
+                    newData['nextWeek'] = nextWeek
+                    newData['curr'] = []
+                    newData['next'] = []
         if newData:
             with open('data/kevin.json', 'w') as f:
                 json.dump(newData, f, indent=2)
@@ -585,9 +590,8 @@ class Misc:
         while not self.bot.is_closed:
             now = datetime.datetime.now()
             if now.isoweekday() == 4 and now.hour == 11 and now.minute == 0:
-                kevin = await bot.get_user_info(os.environ.get('KEVIN'))
-                await self.bot.send_message(kevin,
-                                            'This is a reminder to set your schedule for next week!\nUse `!kevin next | Sunday | Monday | Tuesday | Wednesday | Thursday | Friday | Saturday` to do so.')
+                kevin = await self.bot.get_user_info(os.environ.get('KEVIN'))
+                await self.bot.send_message(kevin, 'This is a reminder to set your schedule for next week!\nUse `!kevin next | Sunday | Monday | Tuesday | Wednesday | Thursday | Friday | Saturday` to do so.')
                 await asyncio.sleep(604800)  # One week
             else:
                 await asyncio.sleep(60)
