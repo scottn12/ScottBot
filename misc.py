@@ -23,6 +23,8 @@ class Misc:
         self.hangmanChannels = []
         self.bot.loop.create_task(self.kevinCheck())
         self.bot.loop.create_task(self.beanLoop())
+        with open('data/pog.json', 'r') as f:
+            self.cachePog = json.load(f)
 
     @commands.command(pass_context=True)
     async def help(self, ctx, *args: str):
@@ -584,6 +586,134 @@ class Misc:
                 msg += '```'
                 await self.bot.say(msg)
 
+    @commands.command(pass_context=True)
+    async def pog(self, ctx):
+        """Reward someone with a Pog."""
+        users = ctx.message.mentions
+        if not users:
+            await self.bot.say('Nobody was mentioned. Use `!pog @user` to pog someone.')
+            return
+
+        data = self.cachePog
+        serverID = ctx.message.server.id
+        for user in users:
+            if user == ctx.message.author:
+                await self.bot.say('You may not attempt to Pog yourself. You shall be punished accordingly.')
+                await self.punishPog(user, serverID)
+                continue
+            userID = user.id
+            if serverID in data:  # Check if server is registered yet
+                if userID in data[serverID]:  # Check if user is registered yet
+                    data[serverID][userID]['pog'] += 1
+                else:  # add user
+                    data[serverID][userID] = {'pog': 1, 'antiPog': 0}
+            else:  # new server
+                data[serverID] = {
+                    userID: {
+                        'pog': 1,
+                        'antiPog': 0
+                    }
+                }
+
+            self.writePog()
+            pog = data[serverID][userID]['pog']
+            if serverID == os.environ.get('MAIN_SERVER'):
+                await self.bot.say(f'{user.name} has now Pog\'d **{pog}** times! <:ebenWog:602589822682398740> ')
+            else:
+                await self.bot.say(f'{user.name} has now Pog\'d **{pog}** times!')
+
+    @commands.command(pass_context=True)
+    async def antiPog(self, ctx):
+        """Punish someone with an Anti-Pog."""
+        users = ctx.message.mentions
+        if not users:
+            await self.bot.say('Nobody was mentioned. Use `!antiPog @user` to anti-pog someone.')
+            return
+
+        data = self.cachePog
+        for user in users:
+            if user == ctx.message.author:
+                await self.bot.say('You may not attempt to Anti-Pog yourself.')
+                continue
+            userID = user.id
+            serverID = ctx.message.server.id
+            if serverID in data:  # Check if server is registered yet
+                if userID in data[serverID]:  # Check if user is registered yet
+                    data[serverID][userID]['antiPog'] += 1
+                else:  # add user
+                    data[serverID][userID] = {'antiPog': 1, 'pog': 0}
+            else:  # new server
+                data[serverID] = {
+                    userID: {
+                        'antiPog': 1,
+                        'pog': 0
+                    }
+                }
+
+            self.writePog()
+            antiPog = data[serverID][userID]['antiPog']
+            if serverID == os.environ.get('MAIN_SERVER'):
+                await self.bot.say(f'{user.name} has now Anti-Pog\'d **{antiPog}** times! ' + '<:sobble:695042968712642672> ')
+            else:
+                await self.bot.say(f'{user.name} has now Anti-Pog\'d **{antiPog}** times!')
+
+    @commands.command(pass_context=True)
+    async def pogScore(self, ctx):
+        """Get the Pog/Anti-Pog reputations of everyone on the server."""
+        users = [user.id for user in ctx.message.mentions]
+        data = self.cachePog
+        serverID = ctx.message.server.id
+        if serverID not in data:
+            await self.bot.say('Nobody has Pog\'d on this server yet! Use `!pog` or `!antiPog` to start!')
+            return
+
+        scores = False  # Make sure at least one score was found
+        msg = f'```{"User:":15s}{"Pog":5s}\t{"Anti-Pog":10s}\tRatio\n'
+        for userID in data[serverID]:
+            if not users or userID in users:
+                scores = True
+            else:
+                continue
+            user = await self.bot.get_user_info(userID)
+            pog = data[serverID][userID]['pog']
+            antiPog = data[serverID][userID]['antiPog']
+            total = pog + antiPog
+            msg += f'{str(user.name):15s}'
+            msg += f'{str(pog):5s}\t'
+            msg += f'{str(antiPog):10s}\t'
+            msg += f'{str(round(pog / total) * 100) + "%":5s}\t\n'
+        msg += '```'
+
+        if scores:
+            await self.bot.say(msg)
+        else:
+            await self.bot.say('Nobody has Pog\'d on this server yet!')
+
+
+    # Used to punish people who try to pog themselves
+    async def punishPog(self, user, serverID):
+        data = self.cachePog
+        userID = user.id
+        if serverID in data:  # Check if server is registered yet
+            if userID in data[serverID]:  # Check if user is registered yet
+                data[serverID][userID]['antiPog'] += 1
+            else:  # add user
+                data[serverID][userID] = {'antiPog': 1, 'pog': 0}
+        else:  # new server
+            data[serverID] = {
+                userID: {
+                    'antiPog': 1,
+                    'pog': 0
+                }
+            }
+
+        self.writePog()
+        antiPog = data[serverID][userID]['antiPog']
+        if serverID == os.environ.get('MAIN_SERVER'):
+            await self.bot.say(f'{user.name} has now Anti-Pog\'d **{antiPog}** times! <:sobble:695044244544684032> ')
+        else:
+            await self.bot.say(f'{user.name} has now Anti-Pog\'d **{antiPog}** times!')
+
     # Check if it is time to update Kevin's Schedule
     async def kevinCheck(self):
         await self.bot.wait_until_ready()
@@ -602,6 +732,12 @@ class Misc:
         if not msg or msg.content.lower() != 'y':
             return False
         return True
+
+    # Update file with cached JSON
+    def writePog(self):
+        with open('data/pog.json', 'w') as f:  # Update JSON
+            json.dump(self.cachePog, f, indent=2)
+
 
 def setup(bot):
     bot.add_cog(Misc(bot))

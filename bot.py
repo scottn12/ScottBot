@@ -14,7 +14,7 @@ import random
 import sqlite3
 
 # Globals
-VERSION = '2.9.3'
+VERSION = '2.9.4'
 PREFIX = '!'
 bot = commands.Bot(command_prefix=PREFIX, description=f'ScottBot Version: {VERSION}')
 db = sqlite3.connect('data/bot_database.db')
