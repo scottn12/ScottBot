@@ -688,7 +688,7 @@ class Misc:
             msg += f'{str(user.name):15s}'
             msg += f'{str(pog):5s}\t'
             msg += f'{str(antiPog):10s}\t'
-            msg += f'{str(round(pog / total) * 100) + "%":5s}\t\n'
+            msg += f'{str(round(pog / total * 100)) + "%":5s}\t\n'
         msg += '```'
 
         if scores:
