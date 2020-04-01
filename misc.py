@@ -635,8 +635,15 @@ class Misc:
             if user == ctx.message.author:
                 await self.bot.say('You may not attempt to Anti-Pog yourself.')
                 continue
+
             userID = user.id
             serverID = ctx.message.server.id
+
+            if user == self.bot.user:
+                await self.bot.say('How dare you attempt to Anti-Pog ScottBot. You shall be punished accordingly.')
+                await self.punishPog(ctx.message.author, serverID)
+                continue
+
             if serverID in data:  # Check if server is registered yet
                 if userID in data[serverID]:  # Check if user is registered yet
                     data[serverID][userID]['antiPog'] += 1
@@ -653,7 +660,7 @@ class Misc:
             self.writePog()
             antiPog = data[serverID][userID]['antiPog']
             if serverID == os.environ.get('MAIN_SERVER'):
-                await self.bot.say(f'{user.name} has now Anti-Pog\'d **{antiPog}** times! ' + '<:sobble:695049133215580260> ')
+                await self.bot.say(f'{user.name} has now Anti-Pog\'d **{antiPog}** times! ' + '<:sobble:550496150407610369> ')
             else:
                 await self.bot.say(f'{user.name} has now Anti-Pog\'d **{antiPog}** times!')
 
@@ -710,7 +717,7 @@ class Misc:
         self.writePog()
         antiPog = data[serverID][userID]['antiPog']
         if serverID == os.environ.get('MAIN_SERVER'):
-            await self.bot.say(f'{user.name} has now Anti-Pog\'d **{antiPog}** times! <:sobble:695044244544684032> ')
+            await self.bot.say(f'{user.name} has now Anti-Pog\'d **{antiPog}** times! <:sobble:550496150407610369> ')
         else:
             await self.bot.say(f'{user.name} has now Anti-Pog\'d **{antiPog}** times!')
 
