@@ -660,7 +660,7 @@ class Misc:
             self.writePog()
             antiPog = data[serverID][userID]['antiPog']
             if serverID == os.environ.get('MAIN_SERVER'):
-                await self.bot.say(f'{user.name} has now Anti-Pog\'d **{antiPog}** times! ' + '<:sobble:550496150407610369> ')
+                await self.bot.say(f'{user.name} has now Anti-Pog\'d **{antiPog}** times! ' + '<:antipog:695760952284676126> ')
             else:
                 await self.bot.say(f'{user.name} has now Anti-Pog\'d **{antiPog}** times!')
 
@@ -717,7 +717,7 @@ class Misc:
         self.writePog()
         antiPog = data[serverID][userID]['antiPog']
         if serverID == os.environ.get('MAIN_SERVER'):
-            await self.bot.say(f'{user.name} has now Anti-Pog\'d **{antiPog}** times! <:sobble:550496150407610369> ')
+            await self.bot.say(f'{user.name} has now Anti-Pog\'d **{antiPog}** times! <:antipog:695760952284676126> ')
         else:
             await self.bot.say(f'{user.name} has now Anti-Pog\'d **{antiPog}** times!')
 
