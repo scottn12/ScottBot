@@ -14,7 +14,7 @@ import random
 import sqlite3
 
 # Globals
-VERSION = '2.9.4'
+VERSION = '2.9.4.1'
 PREFIX = '!'
 bot = commands.Bot(command_prefix=PREFIX, description=f'ScottBot Version: {VERSION}')
 db = sqlite3.connect('data/bot_database.db')
@@ -110,7 +110,7 @@ async def on_message(message):
     elif message.author.id == os.environ.get('SECRET_USER_2'):
         if random.randint(0, 100) == 12:
             await bot.send_message(message.channel, ':rage: *REEEEEEEEEE* UDYR :rage:')
-    elif message.author.id == os.environ.get('SECRET_USER_3'):
+    elif message.author.id == os.environ.get('KEVIN'):
         if random.randint(0, 100) == 12:
             await bot.send_message(message.channel, ':rage: *REEEEEEEEEE* ZYRA :rage:')
 
