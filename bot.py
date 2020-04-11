@@ -19,10 +19,15 @@ PREFIX = '!'
 bot = commands.Bot(command_prefix=PREFIX, description=f'ScottBot Version: {VERSION}')
 db = sqlite3.connect('data/bot_database.db')
 cursor = db.cursor()
+started = False
 
 # Load all essential files
 @bot.event
 async def on_ready():
+    global started
+    if started:
+        return
+    started = True
     # Load Extensions
     extensions = ['flake', 'misc', 'roles', 'quotes']
     for extension in extensions:
@@ -95,13 +100,20 @@ async def on_message(message):
         for i in range(3):
             emoji = emojis.pop(random.randint(0, len(emojis) - 1))
             await bot.add_reaction(message, emoji)
-    if message.author.id == os.environ.get('SECRET_USER'):
+    if message.author.id == os.environ.get('SECRET_USER_1'):
         if 'corrupt' in message.content.lower():
             await bot.send_message(message.author, 'Your message has been deleted as it has been marked as anti-Scott propaganda. Please refrain from speaking poorly upon the regime. And remember, ScottBot is always listening.')
             await bot.delete_message(message)
             return
         if random.randint(0, 100) == 12:
             await bot.send_message(message.channel, ':rage: *REEEEEEEEEE* YASUO :rage:')
+    elif message.author.id == os.environ.get('SECRET_USER_2'):
+        if random.randint(0, 100) == 12:
+            await bot.send_message(message.channel, ':rage: *REEEEEEEEEE* UDYR :rage:')
+    elif message.author.id == os.environ.get('SECRET_USER_3'):
+        if random.randint(0, 100) == 12:
+            await bot.send_message(message.channel, ':rage: *REEEEEEEEEE* ZYRA :rage:')
+
     await bot.process_commands(message)
 
 if __name__ == '__main__':
