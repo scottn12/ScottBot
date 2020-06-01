@@ -21,7 +21,7 @@ class Misc:
         self.bot = bot
         self.bot.remove_command('help')
         self.hangmanChannels = []
-        self.bot.loop.create_task(self.kevinCheck())
+        # self.bot.loop.create_task(self.kevinCheck())
         self.bot.loop.create_task(self.beanLoop())
         with open('data/pog.json', 'r') as f:
             self.cachePog = json.load(f)
@@ -621,6 +621,11 @@ class Misc:
                 await self.bot.say(f'{user.name} has now Pog\'d **{pog}** times! <:ebenWog:602589822682398740> ')
             else:
                 await self.bot.say(f'{user.name} has now Pog\'d **{pog}** times!')
+
+    @commands.command(pass_context=True)
+    async def gop(self, ctx):
+        """Alias for antiPog"""
+        await self.antiPog.invoke(ctx)
 
     @commands.command(pass_context=True)
     async def antiPog(self, ctx):
