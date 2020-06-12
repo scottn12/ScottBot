@@ -597,7 +597,8 @@ class Misc:
             f.write(str(count))
 
         user = await self.bot.get_user_info(os.environ.get('SECRET_USER_1'))
-        await self.bot.send_file(ctx.message.channel, 'assets/img/second_place.jpg', content=f'{user.mention} has now gotten second place **{count}** times! All hail the second place master!')
+        msg = await self.bot.send_file(ctx.message.channel, 'assets/img/second_place.jpg', content=f'{user.name} has now gotten second place **{count}** times! All hail the second place master!')
+        await self.bot.add_reaction(msg, '🥈')
 
     @commands.command(pass_context=True)
     async def pog(self, ctx):
