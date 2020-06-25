@@ -14,7 +14,7 @@ import random
 import sqlite3
 
 # Globals
-VERSION = '2.9.4.4'
+VERSION = '2.9.5'
 PREFIX = '!'
 bot = commands.Bot(command_prefix=PREFIX, description=f'ScottBot Version: {VERSION}')
 db = sqlite3.connect('data/bot_database.db')
@@ -29,7 +29,7 @@ async def on_ready():
         return
     started = True
     # Load Extensions
-    extensions = ['flake', 'misc', 'roles', 'quotes']
+    extensions = ['flake', 'misc', 'roles', 'quotes', 'slippi']
     for extension in extensions:
         print('Loading ' + extension + '...')
         bot.load_extension(extension)
