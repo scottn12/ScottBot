@@ -37,6 +37,7 @@ class Misc:
 
     @commands.command(pass_context=True)
     async def addSlippi(self, ctx, name=None, tag=None):
+        """Adds a player to the list of slippi tags."""
         if not (name and tag):
             await self.bot.say('You must provide both a name and tag to be added. `!addSlippi name tag`')
         else:
