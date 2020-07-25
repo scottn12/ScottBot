@@ -1,4 +1,5 @@
 /data
+/assets
 run.sh
 /__pycache__
 /venv
