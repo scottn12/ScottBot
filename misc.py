@@ -1,9 +1,9 @@
 # ScottBot by github.com/scottn12
 # misc.py
 # Contains all commands that work independently of other commands.
-
+import discord
 from discord.ext import commands
-from discord import ServerRegion
+from discord import VoiceRegion
 from bot import VERSION
 from discord.utils import get
 import smtplib
@@ -15,43 +15,47 @@ import datetime
 import asyncio
 
 
-class Misc:
+class Misc(commands.Cog, name='Miscellaneous'):
     """Miscellaneous commands anyone can use."""
     def __init__(self, bot):
         self.bot = bot
-        self.bot.remove_command('help')
+        # self.bot.remove_command('help')
         self.hangmanChannels = []
-        # self.bot.loop.create_task(self.kevinCheck())
+        self.bot.loop.create_task(self.kevinCheck())
         self.bot.loop.create_task(self.beanLoop())
         with open('data/pog.json', 'r') as f:
             self.cachePog = json.load(f)
 
-    @commands.command(pass_context=True)
-    async def help(self, ctx, *args: str):
-        '''Shows this message.'''
-        return await commands.bot._default_help_command(ctx, *args)
+    # @commands.command(pass_context=True)
+    # async def help(self, ctx, *args: str):
+    #     '''Shows this message.'''
+    #     return await commands.bot._default_help_command(ctx, *args)
 
     @commands.command(pass_context=True)
     async def hangman(self, ctx):
         """Play hangman."""
         if ctx.message.channel in self.hangmanChannels:
-            await self.bot.send_message(ctx.message.author, 'There is already a game in that channel! Please try again later.')
+            await ctx.message.author.send('There is already a game in that channel! Please try again later.')
             return
         self.hangmanChannels.append(ctx.message.channel)
-        await self.bot.send_message(ctx.message.author, 'Send your phrase here!')
+        await ctx.message.author.send('Send your phrase here!')
         phrase = None
         while not phrase:
-            msg = await self.bot.wait_for_message(timeout=60, author=ctx.message.author)
+            msg = None
+            try:
+                msg = await self.bot.wait_for('message', timeout=60)
+            except asyncio.TimeoutError:
+                pass
             if not msg:
                 self.hangmanChannels.remove(ctx.message.channel)
-                await self.bot.send_message(ctx.message.author, 'No phrase provided. Use `!hangman` in your server channel again to retry.')
+                await ctx.message.author.send('No phrase provided. Use `!hangman` in your server channel again to retry.')
                 return
-            if not msg.channel.is_private:
+            if not isinstance(msg.channel, discord.abc.PrivateChannel) or msg.author != ctx.message.author:
                 continue
             phrase = msg.content
             if len(phrase) < 6:
                 phrase = None
-                await self.bot.send_message(ctx.message.author, 'Phrase must be at least 6 characters long. Enter a new phrase.')
+                await ctx.message.author.send('Phrase must be at least 6 characters long. Enter a new phrase.')
                 continue
 
             validWords = True
@@ -60,10 +64,10 @@ class Misc:
                     validWords = False
             if not validWords:
                 phrase = None
-                await self.bot.send_message(ctx.message.author, 'Phrases must contain ONLY letters. Enter a new phrase.')
+                await ctx.message.author.send('Phrases must contain ONLY letters. Enter a new phrase.')
                 continue
 
-        await self.bot.send_message(ctx.message.author, 'Success!')
+        await ctx.message.author.send('Success!')
         words = phrase.split()
         hiddenWords  = [''] * len(words)
         spacedWords  = [''] * len(words)
@@ -75,28 +79,36 @@ class Misc:
         start = 'Guessed:\n ___________\n |        |\n |\n |\n |\n |\n---'
         fails = 0
         guessed = ''
-        await self.bot.say(f'Hangman game created by: **{ctx.message.author.name.replace(ctx.message.author.discriminator, "")}**\n```{start}\n{hiddenPhrase}```')
+        lastMessageSent = await ctx.send(f'Hangman game created by: **{ctx.message.author.name.replace(ctx.message.author.discriminator, "")}**\n```{start}\n{hiddenPhrase}```')
         timeout = 900
         while True:
             win = False
             lose = False
-            msg = await self.bot.wait_for_message(timeout=timeout, channel=ctx.message.channel)
+            msg = None
+            try:
+                msg = await self.bot.wait_for('message', timeout=timeout)
+            except asyncio.TimeoutError:
+                pass
             timeout = 300
             if not msg:
                 self.hangmanChannels.remove(ctx.message.channel)
-                await self.bot.say(f'Hangman game created by: **{ctx.message.author.name.replace(ctx.message.author.discriminator, "")}**\n```{start}\n{spacedPhrase}```**Game expired due to inactivity.**')
+                await ctx.send(f'Hangman game created by: **{ctx.message.author.name.replace(ctx.message.author.discriminator, "")}**\n```{start}\n{spacedPhrase}```**Game expired due to inactivity.**')
                 return
             if msg.author == ctx.message.author:
                 continue
             guess = msg.content
             if guess.lower() == phrase.lower():
-                await self.bot.say(f'Hangman game created by: **{ctx.message.author.name.replace(ctx.message.author.discriminator, "")}**\n```{start}\n{spacedPhrase}```**You Win!**')
+                await ctx.send(f'Hangman game created by: **{ctx.message.author.name.replace(ctx.message.author.discriminator, "")}**\n```{start}\n{spacedPhrase}```**You Win!**')
+                try:
+                    await lastMessageSent.delete()
+                except:
+                    pass
                 break
             if len(guess) != 1 or not guess.isalpha():
                 continue
             if guess.upper() in guessed:
                 reactions = ['😡', '💤', '😴', '🙃', '🤣', '🙄' ,'👺', '🖕', '🤢', '🤷', '🍆', '🍑', '💦', '👀', '🤔', '🚽', '😖', '😱', '💯', '🐸', '🔥', '🏳️‍🌈', '💔', '😉']
-                await self.bot.add_reaction(msg, random.choice(reactions))
+                await msg.add_reaction(random.choice(reactions))
                 continue
             if guessed == '':
                 guessed = guess.upper()
@@ -128,13 +140,26 @@ class Misc:
                 lose = True
 
             if win:
-                await self.bot.say(f'Hangman game created by: **{ctx.message.author.name.replace(ctx.message.author.discriminator, "")}**\n```{start}\n{hiddenPhrase}```**You Win!**')
+                await ctx.send(f'Hangman game created by: **{ctx.message.author.name.replace(ctx.message.author.discriminator, "")}**\n```{start}\n{hiddenPhrase}```**You Win!**')
+                try:
+                    await lastMessageSent.delete()
+                except:
+                    pass
                 break
             elif lose:
-                await self.bot.say(f'Hangman game created by: **{ctx.message.author.name.replace(ctx.message.author.discriminator, "")}**\n```{start}\n{spacedPhrase}```**You Lose!**')
+                await ctx.send(f'Hangman game created by: **{ctx.message.author.name.replace(ctx.message.author.discriminator, "")}**\n```{start}\n{spacedPhrase}```**You Lose!**')
+                try:
+                    await lastMessageSent.delete()
+                except:
+                    pass
                 break
             else:
-                await self.bot.say(f'Hangman game created by: **{ctx.message.author.name.replace(ctx.message.author.discriminator, "")}**\n```{start}\n{hiddenPhrase}```')
+                currentMessage = await ctx.send(f'Hangman game created by: **{ctx.message.author.name.replace(ctx.message.author.discriminator, "")}**\n```{start}\n{hiddenPhrase}```')
+                try:
+                    await lastMessageSent.delete()
+                except:
+                    pass
+                lastMessageSent = currentMessage
 
         self.hangmanChannels.remove(ctx.message.channel)
 
@@ -142,18 +167,24 @@ class Misc:
     async def restart(self, ctx):
         """Restart and update ScottBot (Scott Only)."""
         if ctx.message.author.id == os.environ.get('SCOTT'):
-            await self.bot.say('Restarting...')
+            await ctx.send('Restarting...')
             os.system('git pull origin master')
             await self.bot.logout()
         else:
-            await self.bot.say('Permission Denied.')
+            await ctx.send('Permission Denied.')
 
     @commands.command(pass_context=True)
     async def request(self, ctx):
         '''Request a feature you would like added to ScottBot.'''
+
+        # If creator uses request, return the current requests
+        if ctx.message.author.id == int(os.environ.get('SCOTT')):
+            with open('data/requests.txt', 'r') as f:
+                await ctx.message.author.send(f.read())
+            return
         msg = ctx.message.content[9:]
         if len(msg) == 0:
-            await self.bot.say('Error! No request provided.')
+            await ctx.send('Error! No request provided.')
             return
 
         # Append to file
@@ -161,7 +192,7 @@ class Misc:
         with open('data/requests.txt', 'a') as f:
             f.write(req)
 
-        emailContent = 'Subject: New Feature Request for ScottBot\n\nUser: {}\nServer: {}\n\n{}'.format(str(ctx.message.author), str(ctx.message.server), msg)
+        emailContent = 'Subject: New Feature Request for ScottBot\n\nUser: {}\nServer: {}\n\n{}'.format(str(ctx.message.author), str(ctx.message.guild), msg)
 
         # GMail
         FROM_EMAIL = os.environ.get('FROM_EMAIL')
@@ -174,23 +205,23 @@ class Misc:
         s.sendmail(FROM_EMAIL, TO_EMAIL, emailContent)
         s.quit()
         
-        await self.bot.say('Request sent!')
+        await ctx.send('Request sent!')
     
-    @commands.command(pass_context=False)
-    async def version(self):
+    @commands.command(pass_context=True)
+    async def version(self, ctx):
         '''Prints ScottBot Version.'''
-        await self.bot.say('ScottBot is running Version: ' + VERSION)
+        await ctx.send('ScottBot is running Version: ' + VERSION)
 
-    @commands.command(pass_context=False)
-    async def source(self):
+    @commands.command(pass_context=True)
+    async def source(self, ctx):
         """Link the source code for ScottBot."""
-        await self.bot.say('https://github.com/scottn12/ScottBot')
+        await ctx.send('https://github.com/scottn12/ScottBot')
 
     @commands.command(pass_context=True)
     async def hello(self, ctx):
         '''ScottBot greets you.'''
         name = ctx.message.author.mention
-        await self.bot.say("Hello {}!".format(name))
+        await ctx.send("Hello {}!".format(name))
 
     @commands.command(pass_context=True)
     async def ironman(self, ctx):
@@ -199,7 +230,7 @@ class Misc:
         msg = ''
         while chars:
             msg += chars.pop(random.randint(0, len(chars) - 1)) + '\n'
-        await self.bot.send_message(ctx.message.author, msg)
+        await ctx.message.author.send(msg)
 
     @commands.command(pass_context=True)
     async def poll(self, ctx):
@@ -211,19 +242,19 @@ class Misc:
             question = msg[0]
             choices = msg[1:]
         except:
-            await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): `!poll Question | Choice | Choice`')
+            await ctx.send('Error! Use the following format(Min 2, Max 9 Choices): `!poll Question | Choice | Choice`')
             return
         # Check if number of choices is valid
         if (len(choices) < 2):
-            await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): `!poll Question | Choice | Choice`')
+            await ctx.send('Error! Use the following format(Min 2, Max 9 Choices): `!poll Question | Choice | Choice`')
             return
         if (len(choices) > 9):
-            await self.bot.say('Error! Use the following format(Min 2, Max 9 Choices): `!poll Question | Choice | Choice`')
+            await ctx.send('Error! Use the following format(Min 2, Max 9 Choices): `!poll Question | Choice | Choice`')
             return
 
         # Try to delete original message
         try:
-            await self.bot.delete_message(ctx.message)
+            await ctx.message.delete()
         except:
             print('need admin D:')
 
@@ -234,10 +265,10 @@ class Misc:
         content += question + '\n'
         for i in range(len(choices)):
             content += emoji[i] + ' ' + choices[i].lstrip(' ') + '\n'  # strip to remove extra spaces at front/back
-        poll = await self.bot.say(content)
+        poll = await ctx.send(content)
         react = ['1⃣', '2⃣', '3⃣', '4⃣', '5⃣', '6⃣', '7⃣', '8⃣', '9⃣'] # unicode for emoji's 1-9
         for i in range(len(choices)):
-            await self.bot.add_reaction(poll, react[i])
+            await poll.add_reaction(react[i])
 
     @commands.command(pass_context=True)
     async def rng(self, ctx):
@@ -246,28 +277,33 @@ class Misc:
         if not content:
             num = random.randint(0,1)
             if num == 0:
-                await self.bot.say('Heads!')
+                await ctx.send('Heads!')
             else:
-                await self.bot.say('Tails!')
+                await ctx.send('Tails!')
         else:
             args = content.split()
-            await self.bot.say(args[random.randint(0, len(args)-1)])
+            await ctx.send(args[random.randint(0, len(args)-1)])
 
     @commands.command(pass_context=True)
     @commands.has_permissions(administrator=True)
     @commands.bot_has_permissions(manage_messages=True)
     async def clear(self, ctx):
         """Clears all messages in the text channel (ADMIN)."""
-        test_msg = await self.bot.say("Are you sure you want to permanently clear all the messages from this channel? Type 'Y' to confirm.")
+
+        # Disable command
+        ctx.send('This command is currently disabled. Use `!request` if you would like to see it re-enabled.')
+        return
+
+        test_msg = await ctx.send("Are you sure you want to permanently clear all the messages from this channel? Type 'Y' to confirm.")
         if not await self.confirmAction(ctx):
-            await self.bot.say('Clear aborted.')
+            await ctx.send('Clear aborted.')
             return
 
         # Test for permissions
         try:
             await self.bot.delete_message(test_msg)
         except:
-            await self.bot.say('Error! ScottBot needs permissions to do this!')
+            await ctx.send('Error! ScottBot needs permissions to do this!')
             return
 
         # Delete
@@ -278,36 +314,36 @@ class Misc:
     @commands.has_permissions(administrator=True)
     async def bean(self, ctx):
         """Allows ScottBot to bean morons."""
-        serverID = ctx.message.server.id
+        serverID = str(ctx.message.guild.id)
         with open('data/bean.json', 'r') as f:
             data = json.load(f)
         found = False
         for server in data['servers']:
             if list(server.keys())[0] == serverID:
                 data['servers'].remove(server)
-                await self.bot.say('This server will no longer get beaned.')
+                await ctx.send('This server will no longer get beaned.')
                 found = True
         if not found:
             data['servers'].append({
                 serverID: {
-                    'channel': ctx.message.channel.id
+                    'channel': str(ctx.message.channel.id)
                 }
             })
-            await self.bot.say('This server will now get BEANED in this channel!')
+            await ctx.send('This server will now get BEANED in this channel!')
         with open('data/bean.json', 'w') as f:  # Update JSON
             json.dump(data, f, indent=2)
 
     @commands.command(pass_context=True)
-    async def beanCount(self):
+    async def beanCount(self, ctx):
         """Checks how much people have been beaned."""
         with open('data/bean.json', 'r') as f:
             data = json.load(f)
         if not data['beanCount']:
-            await self.bot.say('Nobody in this server has been beaned!')
+            await ctx.send('Nobody in this server has been beaned!')
             return
         users = []
         for userID in data['beanCount']:
-            user = get(self.bot.get_all_members(), id=userID)
+            user = await self.bot.fetch_user(int(userID))
             if not user:  # Ensure user is in this server
                 continue
             users.append({'name': user.name, 'count': data['beanCount'][userID]})
@@ -320,12 +356,12 @@ class Misc:
             msg += f'{str(user["name"]):15s}\t'
             msg += f'{user["count"]}\n'
         msg += '```'
-        await self.bot.say(msg)
+        await ctx.send(msg)
 
     # Randomly BEANS people
     async def beanLoop(self):
         await self.bot.wait_until_ready()
-        while not self.bot.is_closed:
+        while not self.bot.is_closed():
             with open('data/bean.json', 'r') as f:
                 data = json.load(f)
             hour = datetime.datetime.now().hour
@@ -335,7 +371,7 @@ class Misc:
                         continue
                     serverID = list(serverObj.keys())[0]
                     channelID = serverObj[serverID]['channel']
-                    server = get(self.bot.servers, id=serverID)
+                    server = self.bot.get_guild(int(serverID))
                     if not server:  # Ensure ScottBot is still in the server
                         continue
                     user = None
@@ -350,8 +386,8 @@ class Misc:
                         data['beanCount'][user.id] = 1
                     with open('data/bean.json', 'w') as f:
                         json.dump(data, f, indent=2)
-                    channel = get(self.bot.get_all_channels(), id=channelID)
-                    await self.bot.send_file(channel, 'assets/img/bean.png', content=user.mention)
+                    channel = server.get_channel(int(channelID))
+                    await channel.send(user.mention, file=discord.File('assets/img/bean.png'))
 
             wait = random.randint(3600, 7200)  # Wait 1-2 hours for next bean attempt
             await asyncio.sleep(wait)
@@ -365,30 +401,30 @@ class Misc:
         role = None  # Default None if no role provided
         roleID = None
         if content == 'everyone':
-            await self.bot.say('Error! `everyone` is not a valid role. To have ScottBot announce when every user goes live, simply use `!streamPing` alone.')
+            await ctx.send('Error! `everyone` is not a valid role. To have ScottBot announce when every user goes live, simply use `!streamPing` alone.')
             return
         elif content != '':
-            role = get(ctx.message.server.roles, name=content)
+            role = get(ctx.message.guild.roles, name=content)
             if not role:  # Check mentioned roles if any
                 roles = ctx.message.role_mentions
                 if not roles:
-                    await self.bot.say(f'Error! `{content}` is not a valid role!')
+                    await ctx.send(f'Error! `{content}` is not a valid role!')
                     return
                 if len(roles) > 1:
-                    await self.bot.say('Error! Only one role is allowed.')
+                    await ctx.send('Error! Only one role is allowed.')
                     return
                 role = roles[0]
                 roleID = role.id
             else:
                 if role.is_everyone:
-                    await self.bot.say('Error! `everyone` is not a valid role. To have ScottBot announce when every user goes live, simply use `!streamPing` alone.')
+                    await ctx.send('Error! `everyone` is not a valid role. To have ScottBot announce when every user goes live, simply use `!streamPing` alone.')
                     return
                 roleID = role.id
 
         with open('data/streams.json', 'r') as f:
             data = json.load(f)
 
-        serverID = ctx.message.server.id
+        serverID = ctx.message.guild.id
         channelID = ctx.message.channel.id
         enable = True
         if serverID in data:  # Check if server is registered yet
@@ -415,7 +451,7 @@ class Misc:
             msg += f'StreamPing enabled for **ALL USERS**! Use `!streamPing "RoleName"` to __only__ ping members of that specific role.'
         else:
             msg += 'StreamPing disabled!'
-        await self.bot.say(msg)
+        await ctx.send(msg)
 
         # Update JSON
         with open('data/streams.json', 'w') as f:  # Update JSON
@@ -438,61 +474,61 @@ class Misc:
             pog = words[1]
             wog = words[2]
             try:
-                await self.bot.delete_message(ctx.message)
+                await ctx.message.delete()
             except:
                 pass
         elif len(words) != 1:
-            await self.bot.say('You must `!powerUp` with two emoji\'s, or none for the default `!powerUp`.')
+            await ctx.send('You must `!powerUp` with two emoji\'s, or none for the default `!powerUp`.')
             return
 
-        msg = await self.bot.say('`POWERING UP!!!`\n' + pog + unchecked * n + arrow + question)
+        msg = await ctx.send('`POWERING UP!!!`\n' + pog + unchecked * n + arrow + question)
 
         for i in range(n):
             time.sleep(.5)
             if i == n - 1:
-                await self.bot.edit_message(msg, '`WAKANDA FOREVER!!!!!!!!!`\n' + pog + checked * n + arrow + wog)
+                await msg.edit(content='`WAKANDA FOREVER!!!!!!!!!`\n' + pog + checked * n + arrow + wog)
             else:
-                await self.bot.edit_message(msg, '`POWERING UP!!!`\n' + pog + checked * (i+1) + unchecked * (n-i-1) + arrow + question)
+                await msg.edit(content='`POWERING UP!!!`\n' + pog + checked * (i+1) + unchecked * (n-i-1) + arrow + question)
 
     @commands.command(pass_context=True)
     async def region(self, ctx, region=None):
         """Changes server region. Swaps between US East and US Central if none is provided."""
 
-        curr = ctx.message.server.region
+        curr = ctx.message.guild.region
         if not region:
-            if curr == ServerRegion.us_east:
-                await self.bot.edit_server(ctx.message.server, region=ServerRegion.us_central)
-                await self.bot.say('The region has been changed to `us-central`.')
+            if curr == VoiceRegion.us_east:
+                await ctx.guild.edit(region=VoiceRegion.us_central)
+                await ctx.send('The region has been changed to `us-central`.')
             else:
-                await self.bot.edit_server(ctx.message.server, region=ServerRegion.us_east)
-                await self.bot.say('The region has been changed to `us-east`.')
+                await ctx.guild.edit(region=VoiceRegion.us_east)
+                await ctx.send('The region has been changed to `us-east`.')
             return
 
         if region.lower() == 'east':
-            region = ServerRegion.us_east
+            region = VoiceRegion.us_east
         elif region.lower() == 'central':
-            region = ServerRegion.us_central
+            region = VoiceRegion.us_central
         elif region.lower() == 'south':
-            region = ServerRegion.us_south
+            region = VoiceRegion.us_south
         elif region.lower() == 'west':
-            region = ServerRegion.us_west
+            region = VoiceRegion.us_west
 
         try:
-            newRegion = ServerRegion(region)
+            newRegion = VoiceRegion(region)
             if newRegion == curr:
-                await self.bot.say(f'The region is already `{newRegion}`.')
+                await ctx.send(f'The region is already `{newRegion}`.')
             else:
-                await self.bot.edit_server(ctx.message.server, region=newRegion)
-                await self.bot.say(f'The region has been changed to `{newRegion}`.')
+                await ctx.guild.edit(region=newRegion)
+                await ctx.send(f'The region has been changed to `{newRegion}`.')
         except ValueError:
-            await self.bot.say('Invalid Region.')
+            await ctx.send('Invalid Region.')
 
     @commands.command(pass_context=True)
     async def kevin(self, ctx):
         """Get Kevin's Schedule for this week. !kevin {next (optional)}"""
         # Only allow in main server or Kevin DM's
-        if not ((ctx.message.channel.is_private and ctx.message.channel.user.id == os.environ.get('KEVIN')) or (ctx.message.server and ctx.message.server.id == os.environ.get('MAIN_SERVER'))):
-            await self.bot.say('This command is disabled in this server.')
+        if not ((isinstance(ctx.message.channel, discord.abc.PrivateChannel) and str(ctx.message.author.id) == os.environ.get('KEVIN')) or (ctx.message.guild and str(ctx.message.guild.id) == os.environ.get('MAIN_SERVER'))):
+            await ctx.send('This command is disabled in this server.')
             return
 
         # Check if schedule needs rotation
@@ -529,17 +565,17 @@ class Misc:
             with open('data/kevin.json', 'r') as f:
                 data = json.load(f)
                 if 'curr' not in data or data['curr'] == []:
-                    await self.bot.say('No schedule currently saved for this week.')
+                    await ctx.send('No schedule currently saved for this week.')
                     return
                 msg = f'```Week of {(now - datetime.timedelta(days=now.isoweekday() % 7)).strftime("%m/%d/%Y")}:\n'
                 days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
                 for i in range(7):
                     msg += f'{(days[i] + ":"):11s} {data["curr"][i]}\n'
                 msg += '```'
-                await self.bot.say(msg)
+                await ctx.send(msg)
 
         # Check if Kevin is trying to set schedule
-        elif ctx.message.author.id == os.environ.get('KEVIN') and len(ctx.message.content.split('|')) > 1:
+        elif ctx.message.author.id == int(os.environ.get('KEVIN')) and len(ctx.message.content.split('|')) > 1:
             days = ctx.message.content.split('|')
             week = None
             if 'curr' in days[0].lower():
@@ -547,9 +583,9 @@ class Misc:
             elif 'next' in days[0].lower():
                 week = 'next'
             else:
-                await self.bot.say('Error! No week specified. Enter in the format: `!kevin {current/next} | Sunday | Monday | Tuesday | Wednesday | Thursday | Friday | Saturday`')
+                await ctx.send('Error! No week specified. Enter in the format: `!kevin {current/next} | Sunday | Monday | Tuesday | Wednesday | Thursday | Friday | Saturday`')
             if week and len(days) != 8:
-                await self.bot.say('Error! Incorrect amount of days. Enter in the format: `!kevin {current/next} | Sunday | Monday | Tuesday | Wednesday | Thursday | Friday | Saturday`')
+                await ctx.send('Error! Incorrect amount of days. Enter in the format: `!kevin {current/next} | Sunday | Monday | Tuesday | Wednesday | Thursday | Friday | Saturday`')
             else:
                 days = days[1:]  # Remove options entry
                 with open('data/kevin.json', 'r') as f:
@@ -564,7 +600,7 @@ class Misc:
                     data['currentWeek'] = currentWeek
                     data['nextWeek'] = nextWeek
                     json.dump(data, f, indent=2)
-                await self.bot.say('Schedule successfully saved!')
+                await ctx.send('Schedule successfully saved!')
 
         # Get schedule
         else:
@@ -577,14 +613,14 @@ class Misc:
                 if week not in data or data[week] == []:
                     if week == 'curr':
                         week = 'this'
-                    await self.bot.say(f'No schedule currently saved for {week} week.')
+                    await ctx.send(f'No schedule currently saved for {week} week.')
                     return
                 msg = f'```Week of {(now - datetime.timedelta(days=now.isoweekday() % 7)).strftime("%m/%d/%Y")}:\n'
                 days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
                 for i in range(7):
                     msg += f'{(days[i] + ":"):11s} {data[week][i]}\n'
                 msg += '```'
-                await self.bot.say(msg)
+                await ctx.send(msg)
 
     @commands.command(pass_context=True)
     async def secondPlace(self, ctx):
@@ -596,26 +632,26 @@ class Misc:
         with open('data/second_place.txt', 'w') as f:
             f.write(str(count))
 
-        user = await self.bot.get_user_info(os.environ.get('SECRET_USER_1'))
-        msg = await self.bot.send_file(ctx.message.channel, 'assets/img/second_place.jpg', content=f'{user.name} has now gotten second place **{count}** times! All hail the second place master!')
-        await self.bot.add_reaction(msg, '🥈')
+        user = await self.bot.fetch_user(int(os.environ.get('SECRET_USER_1')))
+        msg = await ctx.message.channel.send(file=discord.File('assets/img/second_place.jpg'), content=f'{user.name} has now gotten second place **{count}** times! All hail the second place master!')
+        await msg.add_reaction('🥈')
 
     @commands.command(pass_context=True)
     async def pog(self, ctx):
         """Reward someone with a Pog."""
         users = ctx.message.mentions
         if not users:
-            await self.bot.say('Nobody was mentioned. Use `!pog @user` to pog someone.')
+            await ctx.send('Nobody was mentioned. Use `!pog @user` to pog someone.')
             return
 
         data = self.cachePog
-        serverID = ctx.message.server.id
+        serverID = str(ctx.message.guild.id)
         for user in users:
             if user == ctx.message.author:
-                await self.bot.say('You may not attempt to Pog yourself. You shall be punished accordingly.')
-                await self.punishPog(user, serverID)
+                await ctx.send('You may not attempt to Pog yourself. You shall be punished accordingly.')
+                await self.punishPog(user, serverID, ctx)
                 continue
-            userID = user.id
+            userID = str(user.id)
             if serverID in data:  # Check if server is registered yet
                 if userID in data[serverID]:  # Check if user is registered yet
                     data[serverID][userID]['pog'] += 1
@@ -632,9 +668,9 @@ class Misc:
             self.writePog()
             pog = data[serverID][userID]['pog']
             if serverID == os.environ.get('MAIN_SERVER'):
-                await self.bot.say(f'{user.name} has now Pog\'d **{pog}** times! <:ebenWog:602589822682398740> ')
+                await ctx.send(f'{user.name} has now Pog\'d **{pog}** times! <:ebenWog:602589822682398740> ')
             else:
-                await self.bot.say(f'{user.name} has now Pog\'d **{pog}** times!')
+                await ctx.send(f'{user.name} has now Pog\'d **{pog}** times!')
 
     @commands.command(pass_context=True)
     async def gop(self, ctx):
@@ -646,21 +682,21 @@ class Misc:
         """Punish someone with an Anti-Pog."""
         users = ctx.message.mentions
         if not users:
-            await self.bot.say('Nobody was mentioned. Use `!antiPog @user` to anti-pog someone.')
+            await ctx.send('Nobody was mentioned. Use `!antiPog @user` to anti-pog someone.')
             return
 
         data = self.cachePog
         for user in users:
             if user == ctx.message.author:
-                await self.bot.say('You may not attempt to Anti-Pog yourself.')
+                await ctx.send('You may not attempt to Anti-Pog yourself.')
                 continue
 
-            userID = user.id
-            serverID = ctx.message.server.id
+            userID = str(user.id)
+            serverID = str(ctx.message.guild.id)
 
             if user == self.bot.user:
-                await self.bot.say('How dare you attempt to Anti-Pog ScottBot. You shall be punished accordingly.')
-                await self.punishPog(ctx.message.author, serverID)
+                await ctx.send('How dare you attempt to Anti-Pog ScottBot. You shall be punished accordingly.')
+                await self.punishPog(ctx.message.author, serverID, ctx)
                 continue
 
             if serverID in data:  # Check if server is registered yet
@@ -679,18 +715,18 @@ class Misc:
             self.writePog()
             antiPog = data[serverID][userID]['antiPog']
             if serverID == os.environ.get('MAIN_SERVER'):
-                await self.bot.say(f'{user.name} has now Anti-Pog\'d **{antiPog}** times! ' + '<:antipog:695760952284676126> ')
+                await ctx.send(f'{user.name} has now Anti-Pog\'d **{antiPog}** times! ' + '<:antipog:695760952284676126> ')
             else:
-                await self.bot.say(f'{user.name} has now Anti-Pog\'d **{antiPog}** times!')
+                await ctx.send(f'{user.name} has now Anti-Pog\'d **{antiPog}** times!')
 
     @commands.command(pass_context=True)
     async def pogScore(self, ctx):
         """Get the Pog/Anti-Pog reputations of everyone on the server."""
-        users = [user.id for user in ctx.message.mentions]
+        users = [str(user.id) for user in ctx.message.mentions]
         data = self.cachePog
-        serverID = ctx.message.server.id
+        serverID = str(ctx.message.guild.id)
         if serverID not in data:
-            await self.bot.say('Nobody has Pog\'d on this server yet! Use `!pog` or `!antiPog` to start!')
+            await ctx.send('Nobody has Pog\'d on this server yet! Use `!pog` or `!antiPog` to start!')
             return
 
         scores = False  # Make sure at least one score was found
@@ -700,7 +736,7 @@ class Misc:
                 scores = True
             else:
                 continue
-            user = await self.bot.get_user_info(userID)
+            user = await self.bot.fetch_user(int(userID))
             pog = data[serverID][userID]['pog']
             antiPog = data[serverID][userID]['antiPog']
             total = pog + antiPog
@@ -711,13 +747,13 @@ class Misc:
         msg += '```'
 
         if scores:
-            await self.bot.say(msg)
+            await ctx.send(msg)
         else:
-            await self.bot.say('Nobody has Pog\'d on this server yet!')
+            await ctx.send('Nobody has Pog\'d on this server yet!')
 
 
     # Used to punish people who try to pog themselves
-    async def punishPog(self, user, serverID):
+    async def punishPog(self, user, serverID, ctx):
         data = self.cachePog
         userID = user.id
         if serverID in data:  # Check if server is registered yet
@@ -736,18 +772,18 @@ class Misc:
         self.writePog()
         antiPog = data[serverID][userID]['antiPog']
         if serverID == os.environ.get('MAIN_SERVER'):
-            await self.bot.say(f'{user.name} has now Anti-Pog\'d **{antiPog}** times! <:antipog:695760952284676126> ')
+            await ctx.send(f'{user.name} has now Anti-Pog\'d **{antiPog}** times! <:antipog:695760952284676126> ')
         else:
-            await self.bot.say(f'{user.name} has now Anti-Pog\'d **{antiPog}** times!')
+            await ctx.send(f'{user.name} has now Anti-Pog\'d **{antiPog}** times!')
 
     # Check if it is time to update Kevin's Schedule
     async def kevinCheck(self):
         await self.bot.wait_until_ready()
-        while not self.bot.is_closed:
+        while not self.bot.is_closed():
             now = datetime.datetime.now()
             if now.isoweekday() == 4 and now.hour == 11 and now.minute == 0:
-                kevin = await self.bot.get_user_info(os.environ.get('KEVIN'))
-                await self.bot.send_message(kevin, 'This is a reminder to set your schedule for next week!\nUse `!kevin next | Sunday | Monday | Tuesday | Wednesday | Thursday | Friday | Saturday` to do so.')
+                kevin = self.bot.get_user(int(os.environ.get('KEVIN')))
+                await kevin.send('This is a reminder to set your schedule for next week!\nUse `!kevin next | Sunday | Monday | Tuesday | Wednesday | Thursday | Friday | Saturday` to do so.')
                 await asyncio.sleep(604800)  # One week
             else:
                 await asyncio.sleep(60)

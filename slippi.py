@@ -7,7 +7,7 @@ from discord.ext import commands
 import json
 
 
-class Misc:
+class Slippi(commands.Cog, name='Slippi'):
     """Miscellaneous commands anyone can use."""
     def __init__(self, bot):
         self.bot = bot
@@ -31,25 +31,25 @@ class Misc:
             for key in data.keys():
                 rtn += f'{key:10s}{data[key]}\n'
             rtn += "```\nYou can get a specific player's tag by using `!slippi name`"
-            await self.bot.say(rtn)
+            await ctx.send(rtn)
         else:
-            await self.bot.say(data[name])
+            await ctx.send(data[name])
 
     @commands.command(pass_context=True)
     async def addSlippi(self, ctx, name=None, tag=None):
         """Adds a player to the list of slippi tags."""
         if not (name and tag):
-            await self.bot.say('You must provide both a name and tag to be added. `!addSlippi name tag`')
+            await ctx.send('You must provide both a name and tag to be added. `!addSlippi name tag`')
         else:
             data = self.cacheJSON
             for key in data.keys():
                 if key.lower() == name.lower():
-                    await self.bot.say('Error: Player already added.')
+                    await ctx.send('Error: Player already added.')
                     return
             else:
                 data[name] = tag
                 self.writeJSON()
-                await self.bot.say('Added successfully!')
+                await ctx.send('Added successfully!')
 
 
     # Update file with cached JSON
@@ -58,4 +58,4 @@ class Misc:
             json.dump(self.cacheJSON, f, indent=2)
 
 def setup(bot):
-    bot.add_cog(Misc(bot))
+    bot.add_cog(Slippi(bot))

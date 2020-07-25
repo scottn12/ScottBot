@@ -7,9 +7,10 @@ import json
 import random
 import time
 import re
+import asyncio
 
 
-class Quotes:
+class Quotes(commands.Cog, name='Quotes'):
     """Commands for quotes."""
     def __init__(self, bot):
         self.bot = bot
@@ -24,22 +25,22 @@ class Quotes:
         else:
             quote = ctx.message.content[10:]
         if len(quote) == 0:
-            await self.bot.say('Error! No quote was provided.')
+            await ctx.send('Error! No quote was provided.')
             return
 
         mentions = ctx.message.mentions
         if mentions:
-            await self.bot.say('Error! You cannot mention someone in a quote.')
+            await ctx.send('Error! You cannot mention someone in a quote.')
             return
 
         data = self.cacheJSON
 
-        serverID = ctx.message.server.id
+        serverID = str(ctx.message.guild.id)
         if serverID in data:  # Check if server is registered yet
             if 'quotes' in data[serverID]:  # Check if quotes are registered yet
                 quotes = data[serverID]['quotes']
                 if quote in quotes:
-                    await self.bot.say(f'Error! Quote already registered (`{quotes.index(quote)+1}`).')
+                    await ctx.send(f'Error! Quote already registered (`{quotes.index(quote)+1}`).')
                     return
                 quotes.append(quote)
                 total = len(data[serverID]['quotes'])
@@ -54,7 +55,7 @@ class Quotes:
 
         self.writeJSON()
 
-        await self.bot.say(f'Quote **{total}** added!')
+        await ctx.send(f'Quote **{total}** added!')
 
     @commands.command(pass_context=True)
     async def aq(self, ctx):
@@ -65,11 +66,11 @@ class Quotes:
     async def quote(self, ctx):
         """Display the quote at the given index."""
         data = self.cacheJSON
-        serverID = ctx.message.server.id
+        serverID = str(ctx.message.guild.id)
         if serverID in data and 'quotes' in data[serverID] and data[serverID]['quotes']:  # Check if server/quotes are registered
             quotes = data[serverID]['quotes']
         else:
-            await self.bot.say('Error! No quotes found! Use `!addQuote` to add quotes.')
+            await ctx.send('Error! No quotes found! Use `!addQuote` to add quotes.')
             return
 
         # Find/Write Quotes
@@ -88,9 +89,9 @@ class Quotes:
             else:
                 content += f'{quotes[index-1]} `{index}`\n'
         if not content:
-            await self.bot.say('Error! No quote number provided! Use `!allQuotes` to see the full list quotes.')
+            await ctx.send('Error! No quote number provided! Use `!allQuotes` to see the full list quotes.')
         else:
-            await self.bot.say(content)
+            await ctx.send(content)
 
     @commands.command(pass_context=True)
     async def q(self, ctx):
@@ -103,11 +104,11 @@ class Quotes:
         MAX_QUOTES = 5
         data = self.cacheJSON
 
-        serverID = ctx.message.server.id
+        serverID = str(ctx.message.guild.id)
         if serverID in data and 'quotes' in data[serverID] and data[serverID]['quotes']:  # Check if server/quotes are registered
             quotes = data[serverID]['quotes'].copy()
         else:
-            await self.bot.say('Error! No quotes found! Use `!addQuote` to add quotes.')
+            await ctx.send('Error! No quotes found! Use `!addQuote` to add quotes.')
             return
 
         # Check if int was passed & num of quotes is not greater than max allowed
@@ -116,7 +117,7 @@ class Quotes:
         except:
             arg = 1
         if arg > MAX_QUOTES:
-            await self.bot.say('**Up to ' + str(MAX_QUOTES) + ' quotes are allowed at once.**')
+            await ctx.send('**Up to ' + str(MAX_QUOTES) + ' quotes are allowed at once.**')
             arg = MAX_QUOTES
 
         content = ''
@@ -132,7 +133,7 @@ class Quotes:
                     break
             i = data[serverID]['quotes'].index(quotes[rng])  # Get original index before quotes may have been removed
             content += f'{quotes[rng]} `{i+1}`\n'
-        await self.bot.say(content)
+        await ctx.send(content)
 
     @commands.command(pass_context=True)
     async def rq(self, ctx):
@@ -144,11 +145,11 @@ class Quotes:
         """Displays all registered quotes."""
         # Setup
         data = self.cacheJSON
-        serverID = ctx.message.server.id
+        serverID = str(ctx.message.guild.id)
         if serverID in data and 'quotes' in data[serverID] and data[serverID]['quotes']:  # Check if server/quotes are registered
             quotes = data[serverID]['quotes']
         else:
-            await self.bot.say('Error! No quotes found! Use !addQuote to add quotes.')
+            await ctx.send('Error! No quotes found! Use !addQuote to add quotes.')
             return
         MAX_CHARS = 1500
         total = len(quotes)
@@ -164,7 +165,7 @@ class Quotes:
                     continue
                 content += f'{str(i+1):3s} {quotes[i]}\n'
             content += '```'
-            await self.bot.say(content)
+            await ctx.send(content)
             return
 
         # Set up pages
@@ -184,33 +185,36 @@ class Quotes:
         pages[page] += '```'
 
         # Send and wait for reactions
-        msg = await self.bot.say(pages[0])
+        msg = await ctx.send(pages[0])
         react = [u"\u25C0", u"\u25B6"]
-        await self.bot.add_reaction(msg, react[0])  # Back
-        await self.bot.add_reaction(msg, react[1])  # Forward
+        await msg.add_reaction(react[0])  # Back
+        await msg.add_reaction(react[1])  # Forward
         page = 0
         start = time.time()
         end = start + TIMEOUT
         while time.time() < end:
-            reaction = await self.bot.wait_for_reaction(react, message=msg, timeout=int(end - time.time()))
-            if not reaction or reaction.user == self.bot.user:
+            try:
+                reaction, user = await self.bot.wait_for('reaction_add', timeout=int(end - time.time()))
+            except asyncio.TimeoutError:
+                pass
+            if not reaction or user == self.bot.user:
                 continue
-            e = reaction.reaction.emoji
+            e = reaction.emoji
             # Back
-            if e == u"\u25C0":
+            if e == u"\u25C0" or e == '◀':
                 if page == 0:  # Already on the first page
                     continue
                 page -= 1
-                await self.bot.edit_message(msg, new_content=pages[page])
+                await msg.edit(content=pages[page])
                 continue
             # Forward
             else:
                 if page == len(pages) - 1:  # Already on last page
                     continue
                 page += 1
-                await self.bot.edit_message(msg, new_content=pages[page])
+                await msg.edit(content=pages[page])
         content = msg.content.replace(f'Active for {TIMEOUT//60} minutes.', 'NO LONGER ACTIVE') + '**NO LONGER ACTIVE**'
-        await self.bot.edit_message(msg, new_content=content)
+        await msg.edit(new_content=content)
 
     @commands.command(pass_context=True)
     async def allq(self, ctx):
@@ -222,11 +226,11 @@ class Quotes:
     async def changeQuote(self, ctx):
         """Change or delete a given quote (ADMIN)."""
         data = self.cacheJSON
-        serverID = ctx.message.server.id
+        serverID = str(ctx.message.guild.id)
         if serverID in data and 'quotes' in data[serverID] and data[serverID]['quotes']:  # Check if server/quotes are registered
             quotes = data[serverID]['quotes']
         else:
-            await self.bot.say('Error! No quotes registered yet! Use `!addQuote` to add quotes.')
+            await ctx.send('Error! No quotes registered yet! Use `!addQuote` to add quotes.')
             return
         # Parse
         content = ctx.message.content
@@ -235,7 +239,7 @@ class Quotes:
         else:
             content = content[13:]
         if content == '':
-            await self.bot.say('Error! Use the format: `!changeQuote quoteNumber newQuote`')
+            await ctx.send('Error! Use the format: `!changeQuote quoteNumber newQuote`')
             return
         try:
             index = content.index(' ')
@@ -246,33 +250,36 @@ class Quotes:
                 quote_num = int(content)
                 new = None
             except:
-                await self.bot.say('Error! Use the format `!changeQuote quoteNumber newQuote`')
+                await ctx.send('Error! Use the format `!changeQuote quoteNumber newQuote`')
                 return
         if quote_num > len(quotes) or quote_num <= 0:
-            await self.bot.say('Error! That quote does not exist! Use `!allQuotes` to see the full list of quotes.')
+            await ctx.send('Error! That quote does not exist! Use `!allQuotes` to see the full list of quotes.')
             return
 
         if not new and not quotes[quote_num-1]:
-            await self.bot.say(f'Error! That quote is already deleted. Use `!changeQuote {quote_num} "new quote"` to change this quote.')
+            await ctx.send(f'Error! That quote is already deleted. Use `!changeQuote {quote_num} "new quote"` to change this quote.')
             return
 
         # Ask user to confirm and perform change
         thumbs = ['👍', '👎']
         if not new:
-            confirm = await self.bot.say(f'Delete:\n```{quotes[quote_num-1]}```Press {thumbs[0]} to confirm and {thumbs[1]} to abort.')
+            confirm = await ctx.send(f'Delete:\n```{quotes[quote_num-1]}```Press {thumbs[0]} to confirm and {thumbs[1]} to abort.')
         else:
-            confirm = await self.bot.say(f'Change:\n```{quotes[quote_num - 1]}\nTO\n{new}```Press {thumbs[0]} to confirm and {thumbs[1]} to abort.')
+            confirm = await ctx.send(f'Change:\n```{quotes[quote_num - 1]}\nTO\n{new}```Press {thumbs[0]} to confirm and {thumbs[1]} to abort.')
 
         TIMEOUT = 180
-        await self.bot.add_reaction(confirm, thumbs[0])
-        await self.bot.add_reaction(confirm, thumbs[1])
+        await confirm.add_reaction(thumbs[0])
+        await confirm.add_reaction(thumbs[1])
         start = time.time()
         end = start + TIMEOUT
         while time.time() < end:
-            reaction = await self.bot.wait_for_reaction(thumbs, message=confirm, timeout=int(start - time.time()))
-            if not reaction or reaction.user != ctx.message.author:
+            try:
+                reaction, user = await self.bot.wait_for('reaction_add', timeout=int(end - time.time()))
+            except asyncio.TimeoutError:
+                pass
+            if not reaction or user != ctx.message.author:
                 continue
-            e = reaction.reaction.emoji
+            e = reaction.emoji
             if e == '👍':
                 if not new and quote_num == len(quotes):  # Remove last quote from the list since it won't disturb any existing quotes
                     quotes.remove(quotes[quote_num-1])
@@ -282,12 +289,12 @@ class Quotes:
                     quotes[quote_num-1] = new
                 data[serverID]['quotes'] = quotes
                 self.writeJSON()
-                await self.bot.say('Success!')
+                await ctx.send('Success!')
                 return
             else:
-                await self.bot.say('Change aborted.')
+                await ctx.send('Change aborted.')
                 return
-        await self.bot.say('Change aborted.')
+        await ctx.send('Change aborted.')
         return
 
     @commands.command(pass_context=True)
@@ -299,11 +306,11 @@ class Quotes:
     async def searchQuote(self, ctx):
         """Search for quotes."""
         data = self.cacheJSON
-        serverID = ctx.message.server.id
+        serverID = str(ctx.message.guild.id)
         if serverID in data and 'quotes' in data[serverID] and data[serverID]['quotes']:  # Check if server/quotes are registered
             quotes = data[serverID]['quotes']
         else:
-            await self.bot.say('Error! No quotes registered yet! Use `!addQuote` to add quotes.')
+            await ctx.send('Error! No quotes registered yet! Use `!addQuote` to add quotes.')
             return
 
         # Parse
@@ -313,7 +320,7 @@ class Quotes:
         else:
             content = content[13:]
         if content == '':
-            await self.bot.say('Error! Use the format: `!searchQuote keyword1 keyword2 keyword3`')
+            await ctx.send('Error! Use the format: `!searchQuote keyword1 keyword2 keyword3`')
             return
         keywords = content.split()
 
@@ -343,7 +350,7 @@ class Quotes:
             quoteNum += 1
 
         if len(results) == 0:
-            await self.bot.say('No matches found!')
+            await ctx.send('No matches found!')
             return
 
         content = f'**{total_results} Matches Found!**\n'
@@ -357,7 +364,7 @@ class Quotes:
                 for value in results[key]:
                     content += f'{str(value[0]):3s} {value[1]}\n'
                 content += '```'
-            await self.bot.say(content)
+            await ctx.send(content)
             return
 
         # Set up pages
@@ -384,34 +391,37 @@ class Quotes:
             pages[page] += '```'
 
         # Send message and wait for reactions
-        msg = await self.bot.say(pages[0])
+        msg = await ctx.send(pages[0])
         page = 0
         react = [u"\u25C0", u"\u25B6"]
-        await self.bot.add_reaction(msg, react[0])  # Back
-        await self.bot.add_reaction(msg, react[1])  # Forward
+        await msg.add_reaction(react[0])  # Back
+        await msg.add_reaction(react[1])  # Forward
         TIMEOUT = 180
         start = time.time()
         end = start + TIMEOUT
         while time.time() < end:
-            reaction = await self.bot.wait_for_reaction(react, message=msg, timeout=int(end - time.time()))
-            if not reaction or reaction.user == self.bot.user:
+            try:
+                reaction, user = await self.bot.wait_for('reaction_add', timeout=int(end - time.time()))
+            except asyncio.TimeoutError:
+                pass
+            if not reaction or user == self.bot.user:
                 continue
-            e = reaction.reaction.emoji
+            e = reaction.emoji
             # Back
-            if e == u"\u25C0":
+            if e == u"\u25C0" or e == '◀':
                 if page == 0:  # Already on the first page
                     continue
                 page -= 1
-                await self.bot.edit_message(msg, new_content=pages[page])
+                await msg.edit(content=pages[page])
                 continue
             # Forward
             else:
                 if page == len(pages) - 1:  # Already on last page
                     continue
                 page += 1
-                await self.bot.edit_message(msg, new_content=pages[page])
+                await msg.edit(content=pages[page])
         content = pages[page] + '**NO LONGER ACTIVE**'
-        await self.bot.edit_message(msg, new_content=content)
+        await msg.edit(content=content)
 
     @commands.command(pass_context=True)
     async def sq(self, ctx):
@@ -422,11 +432,11 @@ class Quotes:
     async def matchQuote(self, ctx):
         """Guess the missing word from the quote provided."""
         data = self.cacheJSON
-        serverID = ctx.message.server.id
+        serverID = str(ctx.message.guild.id)
         if serverID in data and 'quotes' in data[serverID] and data[serverID]['quotes']:  # Check if server/quotes are registered
             quotes = data[serverID]['quotes'].copy()
         else:
-            await self.bot.say('Error! No quotes registered yet! Use `!addQuote` to add quotes.')
+            await ctx.send('Error! No quotes registered yet! Use `!addQuote` to add quotes.')
             return
 
         # Try to find quote that works until you run out of quotes
@@ -456,7 +466,7 @@ class Quotes:
         if eligible:
             word, cleanWord = eligible[random.randint(0, len(eligible) - 1)]
         else:  # No eligible quotes found
-            await self.bot.say('Error! No eligible quotes found. Use `!addQuote` to add quotes.')
+            await ctx.send('Error! No eligible quotes found. Use `!addQuote` to add quotes.')
             return
 
         # Deal with discord markdown characters
@@ -469,8 +479,12 @@ class Quotes:
         # Prompt user and get response
         TIMEOUT = 10
         blank_quote = newQuote.replace(word, start + '`_____`' + end)
-        await self.bot.say(f'**Respond with the missing word in {TIMEOUT} seconds!** ({ctx.message.author.mention})\n{blank_quote}')
-        answer = await self.bot.wait_for_message(timeout=TIMEOUT, author=ctx.message.author)
+        await ctx.send(f'**Respond with the missing word in {TIMEOUT} seconds!** ({ctx.message.author.mention})\n{blank_quote}')
+        answer = None
+        try:
+            answer = await self.bot.wait_for('message', timeout=TIMEOUT)
+        except asyncio.TimeoutError:
+            pass
         filled = blank_quote.replace('`_____`', '`'+cleanWord+'`')
         msg = ''
         win = False
@@ -490,7 +504,7 @@ class Quotes:
         if win:
             wins = 1
             losses = 0
-        userID = ctx.message.author.id
+        userID = str(ctx.message.author.id)
         if 'matchScores' in data[serverID]:  # Check if matchScores are registered yet
             scores = data[serverID]['matchScores']
             if userID in scores:  # User already registered
@@ -514,7 +528,7 @@ class Quotes:
             }
         winRate = round(wins/(wins+losses)*100)
         msg += f'\nWins: {wins} Losses: {losses} (**{winRate}%**)'
-        await self.bot.say(msg)
+        await ctx.send(msg)
 
         self.writeJSON()
 
@@ -527,11 +541,11 @@ class Quotes:
     async def quoteScoreboard(self, ctx):
         """Displays the quote scoreboard."""
         data = self.cacheJSON
-        serverID = ctx.message.server.id
+        serverID = str(ctx.message.guild.id)
         if serverID in data and 'matchScores' in data[serverID] and data[serverID]['matchScores']:  # Check if scores are registered
             scores = data[serverID]['matchScores']
         else:
-            await self.bot.say('Error! No scores recorded yet! Use `!matchQuote` to play.')
+            await ctx.send('Error! No scores recorded yet! Use `!matchQuote` to play.')
             return
 
         # Sort scores
@@ -564,7 +578,7 @@ class Quotes:
         # Display
         msg = f'```{"Player:":15s}\tWin Rate:\tWins:\tLosses:\n'
         for score in sortedIDs:
-            user = await self.bot.get_user_info(score)
+            user = await self.bot.fetch_user(int(score))
             wins = scores[score]['wins']
             losses = scores[score]['losses']
             msg += f'{str(user.name):15s}\t'
@@ -572,7 +586,7 @@ class Quotes:
             msg += f'{str(wins):5s}\t'
             msg += f'{str(losses):5s}\n'
         msg += '```'
-        await self.bot.say(msg)
+        await ctx.send(msg)
 
     @commands.command(pass_context=True)
     async def qs(self, ctx):

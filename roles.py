@@ -7,9 +7,10 @@ from discord.ext import commands
 from discord.utils import get
 import json
 import time
+import asyncio
 
 
-class Roles:
+class Roles(commands.Cog, name='Roles'):
     """Commands for role management."""
     def __init__(self, bot):
         self.bot = bot
@@ -21,7 +22,7 @@ class Roles:
     async def manageRoles(self, ctx):
         """Enable/Disable role(s) to be used with !roles (ADMIN)."""
         # Get allowed roles (JSON)
-        serverID = ctx.message.server.id
+        serverID = str(ctx.message.guild.id)
         data = self.cacheJSON
         if serverID in data:
             if 'allowedRoles' in data[serverID]:
@@ -37,9 +38,9 @@ class Roles:
 
         # Get list of all valid roles to add/remove
         roles = []
-        all_roles = ctx.message.server.roles
+        all_roles = ctx.message.guild.roles
         for role in all_roles:
-            if role.permissions >= discord.Permissions.all() or role.is_everyone:
+            if role.permissions >= discord.Permissions.all() or role.is_default():
                 continue
             roles.append(role)
         roles_len = len(roles)
@@ -52,36 +53,40 @@ class Roles:
             content = f'Choose the role(s) you would like to add/remove (**Active for {TIMEOUT} seconds**):\n'
             for i in range(roles_len):
                 content += f'{emoji[i]} '
-                if roles[i].id in allowed_roles:
+                if str(roles[i].id) in allowed_roles:
                     content += f'Remove `{roles[i]}`\n'
                 else:
                     content += f'Add `{roles[i]}`\n'
-            msg = await self.bot.say(content)
+            msg = await ctx.send(content)
             for i in range(roles_len):
-                await self.bot.add_reaction(msg, react[i])
+                await msg.add_reaction(react[i])
             start = time.time()
             end = start + TIMEOUT
             while time.time() < end:
-                reaction = await self.bot.wait_for_reaction(react[:roles_len], message=msg, timeout=int(end-time.time()))
-                if not reaction or reaction.user != ctx.message.author:
+                try:
+                    reaction, user = await self.bot.wait_for('reaction_add', timeout=int(end - time.time()))
+                except asyncio.TimeoutError:
+                    pass
+                if not reaction or user != ctx.message.author:
                     continue
-                e = reaction.reaction.emoji
+                e = reaction.emoji
                 role = roles[react.index(e)]
-                if role.id in allowed_roles:
-                    allowed_roles.remove(role.id)
-                    await self.bot.say(f'You have removed `{role}`!')
+                roleID = str(role.id)
+                if roleID in allowed_roles:
+                    allowed_roles.remove(roleID)
+                    await ctx.send(f'You have removed `{role}`!')
                     content = content.replace(f'Remove `{role}`', f'Add `{role}`')
-                    await self.bot.edit_message(msg, new_content=content)
+                    await msg.edit(content=content)
                 else:
-                    allowed_roles.append(role.id)
-                    await self.bot.say(f'You have added `{role}`!')
+                    allowed_roles.append(roleID)
+                    await ctx.send(f'You have added `{role}`!')
                     content = content.replace(f'Add `{role}`', f'Remove `{role}`')
-                    await self.bot.edit_message(msg, new_content=content)
+                    await msg.edit(content=content)
                 # Update
                 data[serverID]['allowedRoles'] = allowed_roles
                 self.writeJSON()
             content = content.replace(f'Active for {TIMEOUT} seconds', 'NO LONGER ACTIVE')
-            await self.bot.edit_message(msg, new_content=content)
+            await msg.edit(content=content)
             return
 
         # Over 9 Roles
@@ -89,15 +94,15 @@ class Roles:
         content = f'Choose the role(s) you would like to add/remove (**Active for {TIMEOUT} seconds**):\n'
         for i in range(9):
             content += f'{emoji[i]} '
-            if roles[i].id in allowed_roles:
+            if str(roles[i].id) in allowed_roles:
                 content += f'Remove `{roles[i]}`\n'
             else:
                 content += f'Add `{roles[i]}`\n'
-        msg = await self.bot.say(content)
-        await self.bot.add_reaction(msg, u"\u25C0")
+        msg = await ctx.send(content)
+        await msg.add_reaction(u"\u25C0")
         for i in range(9):
-            await self.bot.add_reaction(msg, react[i])
-        await self.bot.add_reaction(msg, u"\u25B6")
+            await msg.add_reaction(react[i])
+        await msg.add_reaction(u"\u25B6")
         page = 0
         start = time.time()
         end = start + TIMEOUT
@@ -107,12 +112,15 @@ class Roles:
             else:
                 on_page = 9
             all_emoji = react[:on_page] + [u"\u25C0", u"\u25B6"]
-            reaction = await self.bot.wait_for_reaction(all_emoji, message=msg, timeout=int(end-time.time()))
-            if not reaction or reaction.user != ctx.message.author:
+            try:
+                reaction, user = await self.bot.wait_for('reaction_add', timeout=int(end - time.time()))
+            except asyncio.TimeoutError:
+                pass
+            if not reaction or user != ctx.message.author:
                 continue
-            e = reaction.reaction.emoji
+            e = reaction.emoji
             # Back
-            if e == u"\u25C0":
+            if e == u"\u25C0" or e == '◀':
                 if page == 0:  # Already on the first page
                     continue
                 page -= 1
@@ -120,15 +128,15 @@ class Roles:
                 content = f'Choose the role(s) you would like to add/remove (**Active for {TIMEOUT} seconds**):\n'
                 for i in range(page * 9, page * 9 + 9):
                     content += f'{emoji[count]} '
-                    if roles[i].id in allowed_roles:
+                    if str(roles[i].id) in allowed_roles:
                         content += f'Remove `{roles[i]}`\n'
                     else:
                         content += f'Add `{roles[i]}`\n'
                     count += 1
-                await self.bot.edit_message(msg, new_content=content)
+                await msg.edit(content=content)
                 continue
             # Forward
-            if e == u"\u25B6":
+            if e == u"\u25B6" or e == '▶':
                 if page * 9 + 8 >= roles_len - 1:  # Already on the last page
                     continue
                 page += 1
@@ -140,30 +148,31 @@ class Roles:
                 content = f'Choose the role(s) you would like to join/leave (**Active for {TIMEOUT} seconds**):\n'
                 for i in range(page * 9, end_i):
                     content += f'{emoji[count]} '
-                    if roles[i].id in allowed_roles:
+                    if str(roles[i].id) in allowed_roles:
                         content += f'Remove `{roles[i]}`\n'
                     else:
                         content += f'Add `{roles[i]}`\n'
                     count += 1
-                await self.bot.edit_message(msg, new_content=content)
+                await msg.edit(content=content)
                 continue
             # Make change
             role = roles[react.index(e) + page * 9]
-            if role.id in allowed_roles:
-                allowed_roles.remove(role.id)
-                await self.bot.say(f'You have removed `{role}`!')
+            roleID = str(role.id)
+            if roleID in allowed_roles:
+                allowed_roles.remove(roleID)
+                await ctx.send(f'You have removed `{role}`!')
                 content = content.replace(f'Remove `{role}`', f'Add `{role}`')
-                await self.bot.edit_message(msg, new_content=content)
+                await msg.edit(content=content)
             else:
-                allowed_roles.append(role.id)
-                await self.bot.say(f'You have added `{role}`!')
+                allowed_roles.append(roleID)
+                await ctx.send(f'You have added `{role}`!')
                 content = content.replace(f'Add `{role}`', f'Remove `{role}`')
-                await self.bot.edit_message(msg, new_content=content)
+                await msg.edit(content=content)
             # Update
             data[serverID]['allowedRoles'] = allowed_roles
             self.writeJSON()
         content = content.replace(f'Active for {TIMEOUT} seconds', 'NO LONGER ACTIVE')
-        await self.bot.edit_message(msg, new_content=content)
+        await msg.edit(content=content)
 
     @commands.command(pass_context=True)
     async def mr(self, ctx):
@@ -177,23 +186,23 @@ class Roles:
         """Creats mentionable role with given name (ADMIN)."""
         split = ctx.message.content.split()[1:]
         if not split:
-            await self.bot.say(f'Error! No name given.')
+            await ctx.send(f'Error! No name given.')
             return
         name = ' '.join(split)
-        for r in ctx.message.server.roles:
+        for r in ctx.message.guild.roles:
             if r.name == name:
-                await self.bot.say(f'Error! Role `{name}` already exists.')
+                await ctx.send(f'Error! Role `{name}` already exists.')
                 return
-        role = await self.bot.create_role(ctx.message.server, name=name)
-        await self.bot.edit_role(ctx.message.server, role, mentionable=True, name=name)
-        await self.bot.say(f'Role `{name}` was successfully created!')
+        role = await self.bot.create_role(ctx.message.guild, name=name)
+        await self.bot.edit_role(ctx.message.guild, role, mentionable=True, name=name)
+        await ctx.send(f'Role `{name}` was successfully created!')
 
     @commands.command(pass_context=True)
     @commands.bot_has_permissions(manage_roles=True)
     async def role(self, ctx):
         '''Join/leave a role using !role @role/"role"'''
         if len(ctx.message.content) < 7:
-            await self.bot.say('No role(s) given! Use the following format: `!role @role/"role"` or use `!roles`.')
+            await ctx.send('No role(s) given! Use the following format: `!role @role/"role"` or use `!roles`.')
             return
         else:
             roles = ctx.message.role_mentions  # Get mentioned roles
@@ -202,38 +211,38 @@ class Roles:
             roleStr = s.split('"')
 
         allowedRoles = []
-        serverID = ctx.message.server.id
+        serverID = ctx.message.guild.id
 
         # Get allowed roles (JSON)
         data = self.cacheJSON
         if serverID in data and 'allowedRoles' in data[serverID] and data[serverID]['allowedRoles']:  # Check if server is registered / role data exists / role data not empty
             allowedRoles = data[serverID]['allowedRoles']
         else:  # No server/role data registered yet
-            await self.bot.say('No roles have been enabled to be used with !role. Use `!manageRoles` to enable roles.')
+            await ctx.send('No roles have been enabled to be used with !role. Use `!manageRoles` to enable roles.')
             return
 
         user = ctx.message.author
 
         for role in roles:  # Evaluate mentioned roles
-            if role.id in allowedRoles:
+            if str(role.id) in allowedRoles:
                 if role in (user.roles):
-                    await self.bot.say('You have been removed from role "' + role.name + '"!')
+                    await ctx.send('You have been removed from role "' + role.name + '"!')
                     try:
-                        await self.bot.remove_roles(user, role)
+                        await user.remove_roles(role)
                     except:
-                        await self.bot.say('Error! Permission denied. Try checking ScottBot\'s permissions')
+                        await ctx.send('Error! Permission denied. Try checking ScottBot\'s permissions')
                         return
                 else:
-                    await self.bot.say('You have been added to role "' + role.name + '"!')
+                    await ctx.send('You have been added to role "' + role.name + '"!')
                     try:
-                        await self.bot.add_roles(user, role)
+                        await user.add_roles(role)
                     except:
-                        await self.bot.say('Error! Permission denied. Try checking ScottBot\'s permissions')
+                        await ctx.send('Error! Permission denied. Try checking ScottBot\'s permissions')
                         return
             else:
-                await self.bot.say('Error! Role: "' + role.name + '" is not enabled to be used with !role.')
+                await ctx.send('Error! Role: "' + role.name + '" is not enabled to be used with !role.')
 
-        serverRoles = ctx.message.server.roles
+        serverRoles = ctx.message.guild.roles
 
         for role in roleStr:  # Evaluate quoted roles
             found = False
@@ -242,96 +251,99 @@ class Roles:
             for serverRole in serverRoles:
                 if (role == serverRole.name):
                     found = True
-                    if (serverRole.id in allowedRoles):
+                    if (str(serverRole.id) in allowedRoles):
                         if (serverRole in user.roles):
-                            await self.bot.say('You have been removed from role: "' + serverRole.name + '"!')
-                            await self.bot.remove_roles(user, serverRole)
+                            await ctx.send('You have been removed from role: "' + serverRole.name + '"!')
+                            await user.remove_roles(serverRole)
                         else:
-                            await self.bot.say('You have been added to role: "' + serverRole.name + '"!')
-                            await self.bot.add_roles(user, serverRole)
+                            await ctx.send('You have been added to role: "' + serverRole.name + '"!')
+                            await user.add_roles(serverRole)
                     else:
-                        await self.bot.say('Error! Role: "' + serverRole.name + '" is not enabled to be used with !role.')
+                        await ctx.send('Error! Role: "' + serverRole.name + '" is not enabled to be used with !role.')
             if not found:
-                await self.bot.say('Error! Role: "' + role + '" not found!')
+                await ctx.send('Error! Role: "' + role + '" not found!')
 
     @commands.command(pass_context=True)
     @commands.bot_has_permissions(manage_roles=True)
     async def roles(self, ctx):
         '''Shows roles available to join/leave.'''
         # Get allowed roles (JSON)
-        serverID = ctx.message.server.id
+        serverID = str(ctx.message.guild.id)
         data = self.cacheJSON
         if serverID in data and 'allowedRoles' in data[serverID] and data[serverID]['allowedRoles']:  # Check if server is registered / role data exists / role data not empty
             allowedRoles = data[serverID]['allowedRoles']
         else:  # No server/role data registered yet
-            await self.bot.say('No roles have been enabled to be used with !role. Use `!manageRoles` to enable roles.')
+            await ctx.send('No roles have been enabled to be used with !role. Use `!manageRoles` to enable roles.')
             return
 
         for id in allowedRoles:
-            role = get(ctx.message.server.roles, id=id)
+            role = ctx.message.guild.get_role(int(id))
             if not role:  # Role has been removed since last use
                 allowedRoles.remove(id)
                 data[serverID]['allowedRoles'] = allowedRoles
                 self.writeJSON()
 
-        user = ctx.message.author
-        user_roles = user.roles
+        author = ctx.message.author
+        user_roles = author.roles
         emoji = [':one:', ':two:', ':three:', ':four:', ':five:', ':six:', ':seven:', ':eight:', ':nine:']
         react = ['1⃣', '2⃣', '3⃣', '4⃣', '5⃣', '6⃣', '7⃣', '8⃣', '9⃣']  # unicode for emoji's 1-9
         total_roles = len(allowedRoles)
         # Allowed roles can fit in one message
         TIMEOUT = 30
         if total_roles <= 9:
-            content = f'Choose the role(s) {user.mention} would like to join/leave (**Active for {TIMEOUT} seconds**):\n'
+            content = f'Choose the role(s) {author.mention} would like to join/leave (**Active for {TIMEOUT} seconds**):\n'
             for i in range(total_roles):
-                role = get(ctx.message.server.roles, id=allowedRoles[i])
+                role = ctx.message.guild.get_role(int(allowedRoles[i]))
                 content += f'{emoji[i]} '
                 if role in user_roles:
                     content += 'Leave'
                 else:
                     content += 'Join'
                 content += f' `{role}`\n'
-            msg = await self.bot.say(content)
+            msg = await ctx.send(content)
             for i in range(total_roles):
-                await self.bot.add_reaction(msg, react[i])
+                await msg.add_reaction(react[i])
             start = time.time()
             end = start + TIMEOUT
             while time.time() < end:
-                reaction = await self.bot.wait_for_reaction(react[:total_roles], message=msg, timeout=int(end-time.time()))
-                if not reaction or reaction.user != user:
+                try:
+                    reaction, user = await self.bot.wait_for('reaction_add', timeout=int(end - time.time()))
+                except asyncio.TimeoutError:
+                    pass
+                if not reaction or user != author:
                     continue
-                e = reaction.reaction.emoji
-                role = get(ctx.message.server.roles, id=allowedRoles[react.index(e)])
+                e = reaction.emoji
+                role = ctx.message.guild.get_role(int(allowedRoles[react.index(e)]))
                 if role in user.roles:
-                    await self.bot.remove_roles(user, role)
-                    await self.bot.say(f'{user.name} has left `{role}`!')
+                    await user.remove_roles(role)
+                    await ctx.send(f'{user.name} has left `{role}`!')
                     content = content.replace(f'Leave `{role}`', f'Join `{role}`')
-                    await self.bot.edit_message(msg, new_content=content)
+                    await msg.edit(content=content)
                 else:
-                    await self.bot.add_roles(user, role)
-                    await self.bot.say(f'{user.name} has joined `{role}`!')
+                    await user.add_roles(role)
+                    await ctx.send(f'{user.name} has joined `{role}`!')
                     content = content.replace(f'Join `{role}`', f'Leave `{role}`')
-                    await self.bot.edit_message(msg, new_content=content)
+                    await msg.edit(content=content)
             content = content.replace(f'Active for {TIMEOUT} seconds', 'NO LONGER ACTIVE')
-            await self.bot.edit_message(msg, new_content=content)
+            await msg.edit(content=content)
             return
 
         # Over 9 Allowed Roles
         TIMEOUT = 90
-        content = f'Choose the role(s) {user.mention} would like to join/leave (**Active for {TIMEOUT} seconds**):\n'
+        content = f'Choose the role(s) {author.mention} would like to join/leave (**Active for {TIMEOUT} seconds**):\n'
         for i in range(9):
-            role = get(ctx.message.server.roles, id=allowedRoles[i])
+            role = ctx.message.guild.get_role(int(allowedRoles[i]))
             content += f'{emoji[i]} '
             if role in user_roles:
                 content += 'Leave'
             else:
                 content += 'Join'
             content += f' `{role}`\n'
-        msg = await self.bot.say(content)
-        await self.bot.add_reaction(msg, u"\u25C0")
+        msg = await ctx.send(content)
+        await msg.add_reaction(u"\u25C0")
         for i in range(9):
-            await self.bot.add_reaction(msg, react[i])
-        await self.bot.add_reaction(msg, u"\u25B6")
+            await msg.add_reaction(react[i])
+        await msg.add_reaction(u"\u25B6")
         page = 0
         start = time.time()
         end = start + TIMEOUT
@@ -341,19 +353,22 @@ class Roles:
             else:
                 on_page = 9
             all_emoji = react[:on_page] + [u"\u25C0", u"\u25B6"]
-            reaction = await self.bot.wait_for_reaction(all_emoji, message=msg, timeout=int(end - time.time()))
-            if not reaction or reaction.user != user:
+            try:
+                reaction, user = await self.bot.wait_for('reaction_add', timeout=int(end - time.time()))
+            except asyncio.TimeoutError:
+                pass
+            if not reaction or user != author:
                 continue
-            e = reaction.reaction.emoji
+            e = reaction.emoji
             # Back
-            if e == u"\u25C0":
+            if e == u"\u25C0" or e == '◀':
                 if page == 0:  # Already on the first page
                     continue
                 page -= 1
                 count = 0
                 content = f'Choose the role(s) you would like to join/leave (**Active for {TIMEOUT} seconds**):\n'
                 for i in range(page * 9, page * 9 + 9):
-                    role = get(ctx.message.server.roles, id=allowedRoles[i])
+                    role = ctx.message.guild.get_role(int(allowedRoles[i]))
                     content += f'{emoji[count]} '
                     if role in user_roles:
                         content += 'Leave'
@@ -361,10 +376,10 @@ class Roles:
                         content += 'Join'
                     content += f' `{role}`\n'
                     count += 1
-                await self.bot.edit_message(msg, new_content=content)
+                await msg.edit(content=content)
                 continue
             # Forward
-            if e == u"\u25B6":
+            if e == u"\u25B6" or e == '▶':
                 if page * 9 + 8 >= total_roles - 1:  # Already on the last page
                     continue
                 page += 1
@@ -375,7 +390,7 @@ class Roles:
                     end_i = page * 9 + 9
                 content = f'Choose the role(s) {user.mention} would like to join/leave (**Active for {TIMEOUT} seconds**):\n'
                 for i in range(page * 9, end_i):
-                    role = get(ctx.message.server.roles, id=allowedRoles[i])
+                    role = ctx.message.guild.get_role(int(allowedRoles[i]))
                     content += f'{emoji[count]} '
                     if role in user_roles:
                         content += 'Leave'
@@ -383,22 +398,22 @@ class Roles:
                         content += 'Join'
                     content += f' `{role}`\n'
                     count += 1
-                await self.bot.edit_message(msg, new_content=content)
+                await msg.edit(content=content)
                 continue
             # Role Change
-            role = get(ctx.message.server.roles, id=allowedRoles[react.index(e) + page * 9])
+            role = ctx.message.guild.get_role(int(allowedRoles[react.index(e) + page * 9]))
             if role in user.roles:
-                await self.bot.remove_roles(user, role)
-                await self.bot.say(f'{user.name} has left `{role}`!')
+                await user.remove_roles(role)
+                await ctx.send(f'{user.name} has left `{role}`!')
                 content = content.replace(f'Leave `{role}`', f'Join `{role}`')
-                await self.bot.edit_message(msg, new_content=content)
+                await msg.edit(content=content)
             else:
-                await self.bot.add_roles(user, role)
-                await self.bot.say(f'{user.name} has joined `{role}`!')
+                await user.add_roles(role)
+                await ctx.send(f'{user.name} has joined `{role}`!')
                 content = content.replace(f'Join `{role}`', f'Leave `{role}`')
-                await self.bot.edit_message(msg, new_content=content)
+                await msg.edit(content=content)
         content = content.replace(f'Active for {TIMEOUT} seconds', 'NO LONGER ACTIVE')
-        await self.bot.edit_message(msg, new_content=content)
+        await msg.edit(content=content)
 
     @commands.command(pass_context=True)
     async def r(self, ctx):
@@ -409,14 +424,14 @@ class Roles:
     async def roleRank(self, ctx):
         '''Displays the number of users in each role.'''
         content = f'```{"Role":24s}\tMembers\n'
-        for role in ctx.message.server.roles:
+        for role in ctx.message.guild.roles:
             count = 0
-            for member in ctx.message.server.members:
+            for member in ctx.message.guild.members:
                 if role in member.roles:
                     count += 1
             content += f'{str(role):24s}\t{count}\n'
         content += '```'
-        await self.bot.say(content)
+        await ctx.send(content)
 
     # Update file with cached JSON and upload to AWS
     def writeJSON(self):

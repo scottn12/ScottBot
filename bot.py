@@ -14,7 +14,7 @@ import random
 import sqlite3
 
 # Globals
-VERSION = '2.9.5'
+VERSION = '3.0'
 PREFIX = '!'
 bot = commands.Bot(command_prefix=PREFIX, description=f'ScottBot Version: {VERSION}')
 db = sqlite3.connect('data/bot_database.db')
@@ -29,42 +29,42 @@ async def on_ready():
         return
     started = True
     # Load Extensions
-    extensions = ['flake', 'misc', 'roles', 'quotes', 'slippi']
+    extensions = ['flake', 'misc', 'roles', 'quotes', 'slippi', 'wiishop']
     for extension in extensions:
         print('Loading ' + extension + '...')
         bot.load_extension(extension)
 
-    await bot.change_presence(game=discord.Game(name='Overcooked'))
+    await bot.change_presence(activity=discord.Game(name="Overcooked"))
     print(bot.user.name + ' Version ' + VERSION + " is ready!")
-    await bot.send_message(get(bot.get_all_members(), id=os.environ.get('SCOTT')), f'ScottBot Version {VERSION} has been deployed!')
+    await get(bot.get_all_members(), id=int(os.environ.get('SCOTT'))).send( f'ScottBot Version {VERSION} has been deployed!')
 
 # Default Error Handling
 @bot.event
-async def on_command_error(error, ctx):
+async def on_command_error(ctx, error):
     if isinstance(error, CheckFailure):
-        await bot.send_message(ctx.message.channel, 'Permission Denied.')
+        await ctx.message.channel.send('Permission Denied')
     elif isinstance(error, CommandNotFound):
         pass
     else:
-        await bot.send_message(ctx.message.channel, f'Unknown Error Occurred: ```{error}```')
+        await ctx.message.channel.send(f'Unknown Error Occurred: ```{error}```')
         raise error
 
 # Stream Ping
 @bot.event
 async def on_member_update(before, after):
-    if (before.game == None or before.game.type != 1) and (after.game != None and after.game.type == 1):  # Before = Not Streaming, After = Streaming
-        serverID = before.server.id
+    if (before.activity == None or before.activity.type != discord.ActivityType.streaming) and (after.activity != None and after.activity.type == discord.ActivityType.streaming):  # Before = Not Streaming, After = Streaming
+        serverID = str(before.guild.id)
         with open('data/streams.json', 'r') as f: # Load streams JSON
             data = json.load(f)
         if serverID in data and 'streamChannelID' in data[serverID] and data[serverID]['streamChannelID']:  # Check if server/channelID is registered
-            channelID = data[serverID]['streamChannelID']
+            channelID = int(data[serverID]['streamChannelID'])
         else:
             return # don't ping if not enabled
 
-        roleID = data[serverID]['streamRoleID']  # Get roleID if one is set
+        roleID = int(data[serverID]['streamRoleID'])  # Get roleID if one is set
 
         if roleID != None:
-            role = discord.utils.get(before.server.roles, id=roleID)
+            role = discord.utils.get(before.guild.roles, id=roleID)
             if role not in before.roles:  # If the streamer is not in the stream role then don't ping
                 return
             roleMention = role.mention + ', '
@@ -82,8 +82,8 @@ async def on_member_update(before, after):
             cooldownTime = -1  # First time streaming - no cooldown
         curr = time.time()
         if curr > cooldownTime:  # Cooldown expired - ping
-            msgStr = roleMention + after.mention + ' has just gone live at ' + after.game.url + ' !'
-            await bot.send_message(discord.Object(id=channelID), msgStr)
+            msgStr = roleMention + after.mention + ' has just gone live at ' + after.activity.url + ' !'
+            await bot.get_channel(channelID).send(msgStr)
 
         # Update cooldown time (7200 seconds = 2 hours)
         await asyncio.sleep(5)  # Wait until all pings are sent
@@ -95,24 +95,27 @@ async def on_member_update(before, after):
 
 @bot.event
 async def on_message(message):
-    if 'league' in message.content.lower() and message.author != bot.user and message.server and message.server.id == os.environ.get('MAIN_SERVER'):
+    if 'league' in message.content.lower() and message.author != bot.user and message.guild and message.guild.id == int(os.environ.get('MAIN_SERVER')):
         emojis = ['😂', '🤣', '🤢', '🤒', '🤕', '😡', '👺', '😤', '🤧', '🙄', '👻', '😱', '👎', '💩', '😷', '😒', '😖', '😴', '💤', '🖕', '👶', '🙅', '💇', '🤦', '🙈', '💦', '🍑', '🍆', '🚨', '💀', '📉', '⚠', '☣', '💔', '🔫', '🗑', '🚽']
         for i in range(3):
             emoji = emojis.pop(random.randint(0, len(emojis) - 1))
-            await bot.add_reaction(message, emoji)
-    if message.author.id == os.environ.get('SECRET_USER_1'):
+            await message.add_reaction(emoji)
+    if message.author.id == int(os.environ.get('SECRET_USER_1')):
         if 'corrupt' in message.content.lower():
-            await bot.send_message(message.author, 'Your message has been deleted as it has been marked as anti-Scott propaganda. Please refrain from speaking poorly upon the regime. And remember, ScottBot is always listening.')
-            await bot.delete_message(message)
+            await message.author.send('Your message has been deleted as it has been marked as anti-Scott propaganda. Please refrain from speaking poorly upon the regime. And remember, ScottBot is always listening.')
+            await message.delete()
             return
         if random.randint(0, 100) == 12:
-            await bot.send_message(message.channel, ':rage: *REEEEEEEEEE* YASUO :rage:')
-    elif message.author.id == os.environ.get('SECRET_USER_2'):
+            if random.randint(0, 1):
+                await message.channel.send(':rage: *REEEEEEEEEE* YASUO :rage:')
+            else:
+                await message.channel.send(':rage: *REEEEEEEEEE* YONE :rage:')
+    elif message.author.id == int(os.environ.get('SECRET_USER_2')):
         if random.randint(0, 100) == 12:
-            await bot.send_message(message.channel, ':rage: *REEEEEEEEEE* UDYR :rage:')
-    elif message.author.id == os.environ.get('KEVIN'):
+            await message.channel.send(':rage: *REEEEEEEEEE* UDYR :rage:')
+    elif message.author.id == int(os.environ.get('KEVIN')):
         if random.randint(0, 100) == 12:
-            await bot.send_message(message.channel, ':rage: *REEEEEEEEEE* ZYRA :rage:')
+            await message.channel.send(':rage: *REEEEEEEEEE* ZYRA :rage:')
 
     await bot.process_commands(message)
 
