@@ -166,7 +166,7 @@ class Misc(commands.Cog, name='Miscellaneous'):
     @commands.command(pass_context=True)
     async def restart(self, ctx):
         """Restart and update ScottBot (Scott Only)."""
-        if ctx.message.author.id == os.environ.get('SCOTT'):
+        if ctx.message.author.id == int(os.environ.get('SCOTT')):
             await ctx.send('Restarting...')
             os.system('git pull origin master')
             await self.bot.logout()
