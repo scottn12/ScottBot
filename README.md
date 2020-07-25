@@ -5,4 +5,7 @@ To add ScottBot to your server, please contact me on discord: `skaht#6034`.
 
 Please note many commands require administrative permissions.
 
-Additionally, ffmpeg must be installed to play audio with ScottBot.
+To run ScottBot locally, please note:
+- FFmpeg must be installed to play audio.
+- Some assets may not be included in the repository.
+- ScottBot uses many environment variables (whenever you see `os.environ.get()` called), you will need to recreate this environment variables with your own values.
