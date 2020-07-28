@@ -14,7 +14,7 @@ import random
 import sqlite3
 
 # Globals
-VERSION = '3.0.1'
+VERSION = '3.0.2'
 PREFIX = '!'
 bot = commands.Bot(command_prefix=PREFIX, description=f'ScottBot Version: {VERSION}')
 db = sqlite3.connect('data/bot_database.db')
@@ -36,7 +36,8 @@ async def on_ready():
 
     await bot.change_presence(activity=discord.Game(name="Overcooked"))
     print(bot.user.name + ' Version ' + VERSION + " is ready!")
-    await get(bot.get_all_members(), id=int(os.environ.get('SCOTT'))).send( f'ScottBot Version {VERSION} has been deployed!')
+    if bot.user.name == 'ScottBot':  # Don't send message for TestBot
+        await get(bot.get_all_members(), id=int(os.environ.get('SCOTT'))).send(f'ScottBot Version {VERSION} has been deployed!')
 
 # Default Error Handling
 @bot.event
