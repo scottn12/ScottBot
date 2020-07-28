@@ -170,6 +170,8 @@ class Music(commands.Cog, name='Music'):
                         await asyncio.sleep(120)  # Wait another two minutes if it's paused
                         if vc.is_paused():
                             await vc.disconnect()
+                    else:
+                        await vc.disconnect()
             await asyncio.sleep(60)
 
     # Update file with cached JSON
