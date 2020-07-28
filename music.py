@@ -24,13 +24,8 @@ class Music(commands.Cog, name='Music'):
         """Play audio with ScottBot."""
         data = self.cacheJSON
         if not src:
-            if src == 'list':  # Display list of playable audio
-                msg = 'No audio source specified.\n```\n'
-                msg += '\n'.join(data)
-                msg += '```Use `!play [source] [loop]` to play one of the above options, or use `!play list` to show this again.'
-                await ctx.send(msg)
-                return
-
+            if not ctx.message.author.voice:
+                return await ctx.send('You must be in a voice channel to use `!play`.')
             channel = ctx.message.author.voice.channel
             vc = None
             for voiceChannel in self.bot.voice_clients:
@@ -47,13 +42,15 @@ class Music(commands.Cog, name='Music'):
                 await ctx.send(msg)
 
         elif src not in data:
-            msg = f'Audio file `{src}` not found.\n```\n'
+            msg = '```\n'
+            if src != 'list':  # Display list of playable audio
+                msg = f'Audio file `{src}` not found.\n```\n'
             msg += '\n'.join(data)
             msg += '```Use `!play [source] [loop]` to play one of the above options, or use `!play list` to show this again.'
             await ctx.send(msg)
         else:
             if not ctx.message.author.voice:
-                await ctx.send('First connect to a voice channel to use `!wiiShop`.')
+                await ctx.send('You must connect to a voice channel to play audio!')
                 return
             # Find VoiceChannel and check if its already connected
             channel = ctx.message.author.voice.channel
