@@ -113,7 +113,7 @@ async def on_message(message):
                 await message.channel.send(':rage: *REEEEEEEEEE* YONE :rage:')
     elif message.author.id == int(os.environ.get('SECRET_USER_2')):
         if random.randint(0, 100) == 12:
-            await message.channel.send(':rage: *REEEEEEEEEE* UDYR :rage:')
+            await message.channel.send(':rage: *REEEEEEEEEE* APPLE :rage:')
     elif message.author.id == int(os.environ.get('KEVIN')):
         if random.randint(0, 100) == 12:
             await message.channel.send(':rage: *REEEEEEEEEE* ZYRA :rage:')
