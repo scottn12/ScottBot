@@ -21,7 +21,7 @@ class Misc(commands.Cog, name='Miscellaneous'):
         self.bot = bot
         # self.bot.remove_command('help')
         self.hangmanChannels = []
-        self.bot.loop.create_task(self.kevinCheck())
+        # self.bot.loop.create_task(self.kevinCheck())
         self.bot.loop.create_task(self.beanLoop())
         with open('data/pog.json', 'r') as f:
             self.cachePog = json.load(f)
